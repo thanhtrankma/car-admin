@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Plus, X, FileText, Download, Trash2 } from 'lucide-react';
+import { Plus, X, Download, Trash2 } from 'lucide-react';
 
 interface OrderItem {
   carCode: string;

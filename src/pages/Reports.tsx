@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Users, Car, Calendar } from 'lucide-react';
+import { TrendingUp, DollarSign, ShoppingCart, Car, Calendar } from 'lucide-react';
 
 const Reports = () => {
   const [reportType, setReportType] = useState<'sales' | 'inventory'>('sales');
   const [timeRange, setTimeRange] = useState<'day' | 'month'>('month');
 
-  const monthlyRevenue = [
+  type MonthlyRevenue = { month: string; revenue: number };
+  type DailyRevenue = { day: string; revenue: number };
+
+  const monthlyRevenue: MonthlyRevenue[] = [
     { month: 'Tháng 1', revenue: 1800000000 },
     { month: 'Tháng 2', revenue: 2100000000 },
     { month: 'Tháng 3', revenue: 1950000000 },
@@ -14,7 +17,7 @@ const Reports = () => {
     { month: 'Tháng 6', revenue: 2800000000 },
   ];
 
-  const dailyRevenue = [
+  const dailyRevenue: DailyRevenue[] = [
     { day: 'Ngày 1', revenue: 95000000 },
     { day: 'Ngày 2', revenue: 120000000 },
     { day: 'Ngày 3', revenue: 85000000 },
@@ -45,9 +48,14 @@ const Reports = () => {
     return new Intl.NumberFormat('vi-VN').format(price);
   };
 
-  const revenueData = timeRange === 'month' ? monthlyRevenue : dailyRevenue;
-  const maxRevenue = Math.max(...revenueData.map(r => r.revenue));
-  const totalRevenue = revenueData.reduce((sum, r) => sum + r.revenue, 0);
+  const revenueDataset = timeRange === 'month' ? monthlyRevenue : dailyRevenue;
+  const normalizedRevenueData = revenueDataset.map((item) =>
+    'month' in item
+      ? { label: item.month, revenue: item.revenue }
+      : { label: item.day, revenue: item.revenue }
+  );
+  const maxRevenue = Math.max(...normalizedRevenueData.map((r) => r.revenue));
+  const totalRevenue = normalizedRevenueData.reduce((sum, r) => sum + r.revenue, 0);
   const totalCarsSold = topSellingCars.reduce((sum, car) => sum + car.sales, 0);
 
   return (
@@ -163,7 +171,7 @@ const Reports = () => {
                 <div>
                   <p className="text-gray-600 text-sm font-medium">Doanh thu TB/{timeRange === 'month' ? 'tháng' : 'ngày'}</p>
                   <p className="text-2xl font-bold text-gray-800 mt-2">
-                    {formatPrice(totalRevenue / revenueData.length)} VNĐ
+                    {formatPrice(totalRevenue / normalizedRevenueData.length)} VNĐ
                   </p>
                   <p className="text-green-600 text-sm mt-2 flex items-center">
                     <TrendingUp className="w-4 h-4 mr-1" />
@@ -183,10 +191,10 @@ const Reports = () => {
               Doanh thu {timeRange === 'month' ? 'theo tháng' : 'theo ngày'}
             </h2>
             <div className="space-y-4">
-              {revenueData.map((item, index) => (
+              {normalizedRevenueData.map((item, index) => (
                 <div key={index}>
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-700">{item.month || item.day}</span>
+                    <span className="text-sm font-medium text-gray-700">{item.label}</span>
                     <span className="text-sm font-bold text-gray-800">{formatPrice(item.revenue)} VNĐ</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-4">
