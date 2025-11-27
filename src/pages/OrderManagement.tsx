@@ -1,5 +1,9 @@
-import { useState } from 'react';
-import { Plus, X, Download, Trash2 } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Button, Card, Input, Select, Table, Space, Modal, Form, InputNumber, message } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
+import { PlusOutlined, DownloadOutlined, DeleteOutlined } from '@ant-design/icons';
+
+const { Option } = Select;
 
 interface OrderItem {
   carCode: string;
@@ -20,16 +24,23 @@ interface Invoice {
   createdAt: string;
 }
 
+interface OrderFormValues {
+  customerName: string;
+  customerPhone: string;
+  carCode?: string;
+  quantity?: number;
+}
+
 const OrderManagement = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [showForm, setShowForm] = useState(false);
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [selectedCar, setSelectedCar] = useState('');
-  const [quantity, setQuantity] = useState(1);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [form] = Form.useForm();
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  const [searchField, setSearchField] = useState<'id' | 'customerName' | 'customerPhone'>('id');
+  const [searchValue, setSearchValue] = useState('');
+  const [timeFilter, setTimeFilter] = useState<'all' | 'day' | 'week' | 'month'>('all');
+  const invoiceCounterRef = useRef(0);
 
-  // Mock car data - in production, this would come from API
   const availableCars = [
     { code: 'H001', name: 'Wave Alpha', price: 19380000 },
     { code: 'H002', name: 'Vision', price: 32490000 },
@@ -38,16 +49,15 @@ const OrderManagement = () => {
     { code: 'H005', name: 'Winner X', price: 48210000 },
   ];
 
-  const addItem = () => {
-    if (!selectedCar || quantity <= 0) return;
-    
-    const car = availableCars.find(c => c.code === selectedCar);
+  const addItem = (values: Pick<OrderFormValues, 'carCode' | 'quantity'>) => {
+    const car = availableCars.find(c => c.code === values.carCode);
     if (!car) return;
+    const quantity = values.quantity || 1;
 
-    const existingItem = orderItems.find(item => item.carCode === selectedCar);
+    const existingItem = orderItems.find(item => item.carCode === values.carCode);
     if (existingItem) {
       setOrderItems(orderItems.map(item =>
-        item.carCode === selectedCar
+        item.carCode === values.carCode
           ? { ...item, quantity: item.quantity + quantity, total: (item.quantity + quantity) * item.unitPrice }
           : item
       ));
@@ -60,9 +70,43 @@ const OrderManagement = () => {
         total: quantity * car.price,
       }]);
     }
-    setSelectedCar('');
-    setQuantity(1);
+    form.setFieldsValue({ carCode: undefined, quantity: 1 });
   };
+
+  const isWithinTimeFilter = (dateString: string) => {
+    if (timeFilter === 'all') return true;
+    const targetDate = new Date(dateString);
+    const now = new Date();
+
+    if (timeFilter === 'day') {
+      return targetDate.toDateString() === now.toDateString();
+    }
+
+    if (timeFilter === 'week') {
+      const startOfWeek = new Date(now);
+      startOfWeek.setHours(0, 0, 0, 0);
+      startOfWeek.setDate(now.getDate() - now.getDay());
+
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 7);
+
+      return targetDate >= startOfWeek && targetDate < endOfWeek;
+    }
+
+    return (
+      targetDate.getMonth() === now.getMonth() &&
+      targetDate.getFullYear() === now.getFullYear()
+    );
+  };
+
+  const filteredInvoices = invoices.filter((invoice) => {
+    const keyword = searchValue.trim().toLowerCase();
+    const matchesSearch = keyword
+      ? String(invoice[searchField]).toLowerCase().includes(keyword)
+      : true;
+
+    return matchesSearch && isWithinTimeFilter(invoice.createdAt);
+  });
 
   const removeItem = (carCode: string) => {
     setOrderItems(orderItems.filter(item => item.carCode !== carCode));
@@ -81,19 +125,20 @@ const OrderManagement = () => {
   };
 
   const subtotal = orderItems.reduce((sum, item) => sum + item.total, 0);
-  const vat = subtotal * 0.1; // 10% VAT
+  const vat = subtotal * 0.1;
   const total = subtotal + vat;
 
-  const handleSave = () => {
-    if (!customerName || !customerPhone || orderItems.length === 0) {
-      alert('Vui lòng điền đầy đủ thông tin khách hàng và thêm ít nhất một sản phẩm');
+  const handleSave = (values: OrderFormValues) => {
+    if (orderItems.length === 0) {
+      message.warning('Vui lòng thêm ít nhất một sản phẩm');
       return;
     }
+    invoiceCounterRef.current += 1;
 
     const newInvoice: Invoice = {
-      id: `INV${Date.now()}`,
-      customerName,
-      customerPhone,
+      id: `INV${invoiceCounterRef.current}`,
+      customerName: values.customerName,
+      customerPhone: values.customerPhone,
       items: [...orderItems],
       subtotal,
       vat,
@@ -102,17 +147,13 @@ const OrderManagement = () => {
     };
 
     setInvoices([newInvoice, ...invoices]);
-    setShowForm(false);
-    setCustomerName('');
-    setCustomerPhone('');
+    setIsModalOpen(false);
     setOrderItems([]);
-    setSelectedCar('');
-    setQuantity(1);
-    alert('Tạo hóa đơn thành công!');
+    form.resetFields();
+    message.success('Tạo hóa đơn thành công!');
   };
 
   const handleExport = (invoice: Invoice) => {
-    // In production, this would generate a PDF
     const invoiceText = `
 HÓA ĐƠN BÁN HÀNG
 Mã hóa đơn: ${invoice.id}
@@ -131,7 +172,7 @@ Tạm tính: ${formatPrice(invoice.subtotal)} VNĐ
 VAT (10%): ${formatPrice(invoice.vat)} VNĐ
 TỔNG CỘNG: ${formatPrice(invoice.total)} VNĐ
     `;
-    
+
     const blob = new Blob([invoiceText], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -139,6 +180,7 @@ TỔNG CỘNG: ${formatPrice(invoice.total)} VNĐ
     a.download = `HoaDon_${invoice.id}.txt`;
     a.click();
     URL.revokeObjectURL(url);
+    message.success('Xuất hóa đơn thành công!');
   };
 
   const formatPrice = (price: number) => {
@@ -149,254 +191,292 @@ TỔNG CỘNG: ${formatPrice(invoice.total)} VNĐ
     return new Date(dateString).toLocaleString('vi-VN');
   };
 
+  const itemColumns: ColumnsType<OrderItem> = [
+    {
+      title: 'Mã xe',
+      dataIndex: 'carCode',
+      key: 'carCode',
+    },
+    {
+      title: 'Tên xe',
+      dataIndex: 'carName',
+      key: 'carName',
+    },
+    {
+      title: 'Số lượng',
+      dataIndex: 'quantity',
+      key: 'quantity',
+      render: (quantity, record) => (
+        <InputNumber
+          min={1}
+          value={quantity}
+          onChange={(value) => updateItemQuantity(record.carCode, value || 1)}
+          style={{ width: 100 }}
+        />
+      ),
+    },
+    {
+      title: 'Đơn giá',
+      dataIndex: 'unitPrice',
+      key: 'unitPrice',
+      render: (price) => formatPrice(price) + ' VNĐ',
+    },
+    {
+      title: 'Thành tiền',
+      dataIndex: 'total',
+      key: 'total',
+      render: (total) => <strong>{formatPrice(total)} VNĐ</strong>,
+    },
+    {
+      title: 'Thao tác',
+      key: 'action',
+      render: (_, record) => (
+        <Button
+          type="link"
+          danger
+          icon={<DeleteOutlined />}
+          onClick={() => removeItem(record.carCode)}
+        />
+      ),
+    },
+  ];
+
+  const invoiceColumns: ColumnsType<Invoice> = [
+    {
+      title: 'Mã hóa đơn',
+      dataIndex: 'id',
+      key: 'id',
+    },
+    {
+      title: 'Khách hàng',
+      dataIndex: 'customerName',
+      key: 'customerName',
+    },
+    {
+      title: 'SĐT',
+      dataIndex: 'customerPhone',
+      key: 'customerPhone',
+    },
+    {
+      title: 'Số sản phẩm',
+      dataIndex: 'items',
+      key: 'items',
+      render: (items) => items.length,
+    },
+    {
+      title: 'Tổng tiền',
+      dataIndex: 'total',
+      key: 'total',
+      render: (total) => <strong>{formatPrice(total)} VNĐ</strong>,
+    },
+    {
+      title: 'Ngày tạo',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      render: (date) => formatDate(date),
+    },
+    {
+      title: 'Thao tác',
+      key: 'action',
+      render: (_, record) => (
+        <Button
+          type="link"
+          icon={<DownloadOutlined />}
+          onClick={() => handleExport(record)}
+        >
+          Xuất
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <div>
-      <div className="flex justify-between items-center mb-8">
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+        justifyContent: 'space-between', 
+        alignItems: window.innerWidth < 768 ? 'flex-start' : 'center', 
+        marginBottom: 24,
+        gap: window.innerWidth < 768 ? 16 : 0,
+      }}>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-1">Quản lý đơn hàng</h1>
-          <p className="text-gray-500 text-sm">Tạo và quản lý hóa đơn bán hàng</p>
+          <h1 style={{ fontSize: window.innerWidth < 576 ? 20 : 24, fontWeight: 'bold', marginBottom: 8 }}>Quản lý đơn hàng</h1>
+          <p style={{ color: '#666', fontSize: 14 }}>Tạo và quản lý hóa đơn bán hàng</p>
         </div>
-        {!showForm && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2.5 rounded-lg flex items-center hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Tạo hóa đơn mới
-          </button>
-        )}
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => setIsModalOpen(true)}
+          block={window.innerWidth < 768}
+        >
+          Tạo hóa đơn mới
+        </Button>
       </div>
 
-      {/* Create Invoice Form */}
-      {showForm && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-800">Tạo hóa đơn mới</h2>
-            <button
-              onClick={() => {
-                setShowForm(false);
-                setCustomerName('');
-                setCustomerPhone('');
-                setOrderItems([]);
-                setSelectedCar('');
-                setQuantity(1);
-              }}
-              className="text-gray-500 hover:text-gray-700"
+      <Modal
+        title="Tạo hóa đơn mới"
+        open={isModalOpen}
+        onCancel={() => {
+          setIsModalOpen(false);
+          setOrderItems([]);
+          form.resetFields();
+        }}
+        footer={null}
+        width={window.innerWidth < 768 ? '95%' : 900}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSave}
+          initialValues={{ quantity: 1 }}
+        >
+          <Form.Item
+            label="Tên khách hàng"
+            name="customerName"
+            rules={[{ required: true, message: 'Vui lòng nhập tên khách hàng' }]}
+          >
+            <Input placeholder="Nhập tên khách hàng" size="large" />
+          </Form.Item>
+
+          <Form.Item
+            label="Số điện thoại"
+            name="customerPhone"
+            rules={[{ required: true, message: 'Vui lòng nhập số điện thoại' }]}
+          >
+            <Input placeholder="Nhập số điện thoại" size="large" />
+          </Form.Item>
+
+          <Card title="Thêm sản phẩm" style={{ marginBottom: 16 }}>
+            <Form.Item
+              label="Chọn xe"
+              name="carCode"
             >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+              <Select placeholder="Chọn xe" size="large" style={{ width: '100%' }}>
+                {availableCars.map(car => (
+                  <Option key={car.code} value={car.code}>
+                    {car.name} ({car.code}) - {formatPrice(car.price)} VNĐ
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
 
-          {/* Customer Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div>
-              <label className="block text-gray-700 text-sm font-medium mb-2">
-                Tên khách hàng <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:border-gray-300"
-                placeholder="Nhập tên khách hàng"
-              />
-            </div>
-            <div>
-              <label className="block text-gray-700 text-sm font-medium mb-2">
-                Số điện thoại <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="tel"
-                value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:border-gray-300"
-                placeholder="Nhập số điện thoại"
-              />
-            </div>
-          </div>
+            <Form.Item
+              label="Số lượng"
+              name="quantity"
+            >
+              <InputNumber min={1} style={{ width: '100%' }} size="large" />
+            </Form.Item>
 
-          {/* Add Item */}
-          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 mb-6 border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Thêm sản phẩm</h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="md:col-span-2">
-                <label className="block text-gray-700 text-sm font-medium mb-2">Chọn xe</label>
-                <select
-                  value={selectedCar}
-                  onChange={(e) => setSelectedCar(e.target.value)}
-                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:border-gray-300"
-                >
-                  <option value="">Chọn xe</option>
-                  {availableCars.map(car => (
-                    <option key={car.code} value={car.code}>
-                      {car.name} ({car.code}) - {formatPrice(car.price)} VNĐ
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-gray-700 text-sm font-medium mb-2">Số lượng</label>
-                <input
-                  type="number"
-                  value={quantity}
-                  onChange={(e) => setQuantity(Number(e.target.value))}
-                  min="1"
-                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:border-gray-300"
+            <Form.Item>
+              <Button type="primary" onClick={() => {
+                form.validateFields(['carCode', 'quantity']).then((values) => {
+                  addItem(values);
+                });
+              }}>
+                Thêm
+              </Button>
+            </Form.Item>
+          </Card>
+
+          {orderItems.length > 0 && (
+            <Card title="Danh sách sản phẩm" style={{ marginBottom: 16 }}>
+              <div style={{ overflowX: 'auto' }}>
+                <Table
+                  columns={itemColumns}
+                  dataSource={orderItems}
+                  rowKey="carCode"
+                  pagination={false}
+                  size="small"
+                  scroll={{ x: 'max-content' }}
                 />
               </div>
-              <div className="flex items-end">
-                <button
-                  onClick={addItem}
-                  className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Thêm
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Order Items */}
-          {orderItems.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Danh sách sản phẩm</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="text-left py-3 px-4 text-gray-700 font-medium">Mã xe</th>
-                      <th className="text-left py-3 px-4 text-gray-700 font-medium">Tên xe</th>
-                      <th className="text-left py-3 px-4 text-gray-700 font-medium">Số lượng</th>
-                      <th className="text-left py-3 px-4 text-gray-700 font-medium">Đơn giá</th>
-                      <th className="text-left py-3 px-4 text-gray-700 font-medium">Thành tiền</th>
-                      <th className="text-left py-3 px-4 text-gray-700 font-medium"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orderItems.map((item) => (
-                      <tr key={item.carCode} className="border-b border-gray-100">
-                        <td className="py-3 px-4 text-gray-800">{item.carCode}</td>
-                        <td className="py-3 px-4 text-gray-800">{item.carName}</td>
-                        <td className="py-3 px-4">
-                          <input
-                            type="number"
-                            value={item.quantity}
-                            onChange={(e) => updateItemQuantity(item.carCode, Number(e.target.value))}
-                            min="1"
-                            className="w-20 px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:border-gray-300"
-                          />
-                        </td>
-                        <td className="py-3 px-4 text-gray-800">{formatPrice(item.unitPrice)} VNĐ</td>
-                        <td className="py-3 px-4 text-gray-800 font-medium">{formatPrice(item.total)} VNĐ</td>
-                        <td className="py-3 px-4">
-                          <button
-                            onClick={() => removeItem(item.carCode)}
-                            className="text-red-600 hover:text-red-800"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            </Card>
           )}
 
-          {/* Summary */}
           {orderItems.length > 0 && (
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 mb-6 border border-blue-200">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-700 font-medium">Tạm tính:</span>
-                <span className="text-gray-800 font-semibold">{formatPrice(subtotal)} VNĐ</span>
-              </div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-700 font-medium">VAT (10%):</span>
-                <span className="text-gray-800 font-semibold">{formatPrice(vat)} VNĐ</span>
-              </div>
-              <div className="flex justify-between items-center pt-4 border-t border-blue-200">
-                <span className="text-xl font-bold text-gray-800">TỔNG CỘNG:</span>
-                <span className="text-2xl font-bold text-blue-600">{formatPrice(total)} VNĐ</span>
-              </div>
-            </div>
+            <Card style={{ marginBottom: 16, background: '#e6f7ff' }}>
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Tạm tính:</span>
+                  <strong>{formatPrice(subtotal)} VNĐ</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>VAT (10%):</span>
+                  <strong>{formatPrice(vat)} VNĐ</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #d9d9d9', paddingTop: 8 }}>
+                  <span style={{ fontSize: 18, fontWeight: 'bold' }}>TỔNG CỘNG:</span>
+                  <span style={{ fontSize: 20, fontWeight: 'bold', color: '#1890ff' }}>
+                    {formatPrice(total)} VNĐ
+                  </span>
+                </div>
+              </Space>
+            </Card>
           )}
 
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-4">
-            <button
-              onClick={() => {
-                setShowForm(false);
-                setCustomerName('');
-                setCustomerPhone('');
+          <Form.Item style={{ marginTop: 24, marginBottom: 0 }}>
+            <Space style={{ float: 'right' }}>
+              <Button onClick={() => {
+                setIsModalOpen(false);
                 setOrderItems([]);
-                setSelectedCar('');
-                setQuantity(1);
-              }}
-              className="px-6 py-2.5 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 font-medium shadow-sm"
-            >
-              Hủy
-            </button>
-            <button
-              onClick={handleSave}
-              className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40"
-            >
-              Lưu hóa đơn
-            </button>
-          </div>
-        </div>
-      )}
+                form.resetFields();
+              }}>
+                Hủy
+              </Button>
+              <Button type="primary" htmlType="submit">
+                Lưu hóa đơn
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
 
-      {/* Invoices List */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-800">Danh sách hóa đơn</h2>
+      <Card style={{ marginBottom: 16 }}>
+        <Space direction={window.innerWidth < 768 ? 'vertical' : 'horizontal'} size="middle" style={{ width: '100%' }}>
+          <Select
+            value={searchField}
+            onChange={(value) => setSearchField(value)}
+            style={{ minWidth: 160 }}
+            size="large"
+          >
+            <Option value="id">Mã hóa đơn</Option>
+            <Option value="customerName">Tên khách hàng</Option>
+            <Option value="customerPhone">SĐT</Option>
+          </Select>
+          <Input
+            placeholder="Nhập từ khóa tìm kiếm"
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            size="large"
+          />
+          <Select
+            value={timeFilter}
+            onChange={(value) => setTimeFilter(value)}
+            style={{ minWidth: 180 }}
+            size="large"
+          >
+            <Option value="all">Tất cả thời gian</Option>
+            <Option value="day">Trong ngày</Option>
+            <Option value="week">Trong tuần</Option>
+            <Option value="month">Trong tháng</Option>
+          </Select>
+        </Space>
+      </Card>
+
+      <Card>
+        <div style={{ overflowX: 'auto' }}>
+          <Table
+            columns={invoiceColumns}
+            dataSource={filteredInvoices}
+            rowKey="id"
+            scroll={{ x: 'max-content' }}
+            locale={{
+              emptyText: 'Chưa có hóa đơn nào. Hãy tạo hóa đơn mới!',
+            }}
+          />
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="text-left py-3 px-4 text-gray-700 font-medium">Mã hóa đơn</th>
-                <th className="text-left py-3 px-4 text-gray-700 font-medium">Khách hàng</th>
-                <th className="text-left py-3 px-4 text-gray-700 font-medium">SĐT</th>
-                <th className="text-left py-3 px-4 text-gray-700 font-medium">Số sản phẩm</th>
-                <th className="text-left py-3 px-4 text-gray-700 font-medium">Tổng tiền</th>
-                <th className="text-left py-3 px-4 text-gray-700 font-medium">Ngày tạo</th>
-                <th className="text-left py-3 px-4 text-gray-700 font-medium">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoices.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-8 text-center text-gray-500">
-                    Chưa có hóa đơn nào. Hãy tạo hóa đơn mới!
-                  </td>
-                </tr>
-              ) : (
-                invoices.map((invoice) => (
-                  <tr key={invoice.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 text-gray-800 font-medium">{invoice.id}</td>
-                    <td className="py-3 px-4 text-gray-800">{invoice.customerName}</td>
-                    <td className="py-3 px-4 text-gray-800">{invoice.customerPhone}</td>
-                    <td className="py-3 px-4 text-gray-800">{invoice.items.length}</td>
-                    <td className="py-3 px-4 text-gray-800 font-semibold">{formatPrice(invoice.total)} VNĐ</td>
-                    <td className="py-3 px-4 text-gray-800">{formatDate(invoice.createdAt)}</td>
-                    <td className="py-3 px-4">
-                      <button
-                        onClick={() => handleExport(invoice)}
-                        className="text-blue-600 hover:text-blue-800 flex items-center"
-                        title="Xuất hóa đơn"
-                      >
-                        <Download className="w-5 h-5 mr-1" />
-                        Xuất
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      </Card>
     </div>
   );
 };

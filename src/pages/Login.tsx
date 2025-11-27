@@ -1,108 +1,85 @@
-import { useState } from 'react';
-import { Car, User, Shield } from 'lucide-react';
+
+import { Form, Input, Button, Card, Image } from 'antd';
+import { UserOutlined, LockOutlined } from '@ant-design/icons';
 
 interface LoginProps {
   onLogin: (role: 'manager' | 'staff') => void;
 }
 
 const Login = ({ onLogin }: LoginProps) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'manager' | 'staff'>('staff');
+  const [form] = Form.useForm();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Simple authentication - in production, this would call an API
-    if (username && password) {
-      onLogin(role);
+  const handleSubmit = (values: Record<string, string>) => {
+    if (values.username && values.password) {
+      onLogin('staff');
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800">
-      <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md border border-gray-100">
-        <div className="flex items-center justify-center mb-6">
-          <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-4 rounded-2xl shadow-lg shadow-blue-500/30">
-            <Car className="w-12 h-12 text-white" />
-          </div>
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    }}>
+      <Card
+        style={{
+          width: '100%',
+          maxWidth: 450,
+          margin: '0 16px',
+          borderRadius: 16,
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        }}
+      >
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <Image src="/images/honda.png" alt="logo" width={150} />
+          <p style={{ color: '#666', margin: 0, fontSize: 20, fontWeight: 'bold', marginTop: 10 }}>Đăng nhập vào hệ thống</p>
         </div>
-        <h2 className="text-3xl font-bold text-center bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
-          CarDealer Admin
-        </h2>
-        <p className="text-center text-gray-600 mb-8">Đăng nhập vào hệ thống</p>
-        
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-medium mb-2">
-              Tên đăng nhập
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:border-gray-300"
-              placeholder="Nhập tên đăng nhập"
-              required
-            />
-          </div>
-          
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-medium mb-2">
-              Mật khẩu
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:border-gray-300"
-              placeholder="Nhập mật khẩu"
-              required
-            />
-          </div>
 
-          <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-medium mb-2">
-              Phân quyền
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setRole('manager')}
-                className={`flex items-center justify-center px-4 py-3 border-2 rounded-lg transition-all duration-200 ${
-                  role === 'manager'
-                    ? 'border-blue-600 bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 shadow-md'
-                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                <Shield className="w-5 h-5 mr-2" />
-                <span className="font-medium">Quản lý</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole('staff')}
-                className={`flex items-center justify-center px-4 py-3 border-2 rounded-lg transition-all duration-200 ${
-                  role === 'staff'
-                    ? 'border-blue-600 bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 shadow-md'
-                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                <User className="w-5 h-5 mr-2" />
-                <span className="font-medium">Nhân viên</span>
-              </button>
-            </div>
-          </div>
-          
-          <button
-            type="submit"
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40"
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+          size="large"
+        >
+          <Form.Item
+            label="Tên đăng nhập"
+            name="username"
+            rules={[{ required: true, message: 'Vui lòng nhập tên đăng nhập' }]}
           >
-            Đăng nhập
-          </button>
-        </form>
-      </div>
+            <Input
+              prefix={<UserOutlined />}
+              placeholder="Nhập tên đăng nhập"
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="Mật khẩu"
+            name="password"
+            rules={[{ required: true, message: 'Vui lòng nhập mật khẩu' }]}
+          >
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="Nhập mật khẩu"
+            />
+          </Form.Item>
+
+
+          <Form.Item style={{ marginTop: 24, marginBottom: 0 }}>
+            <Button
+              type="primary"
+              htmlType="submit"
+              block
+              style={{ height: 48, fontSize: 16 }}
+            >
+              Đăng nhập
+            </Button>
+          </Form.Item>
+        </Form>
+      </Card>
     </div>
   );
 };
 
 export default Login;
-

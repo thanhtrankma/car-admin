@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import CarManagement from './pages/CarManagement';
 import AddCar from './pages/AddCar';
+import CarDetail from './pages/CarDetail';
 import OrderManagement from './pages/OrderManagement';
 import CustomerManagement from './pages/CustomerManagement';
 import StockIn from './pages/StockIn';
@@ -79,6 +80,18 @@ function App() {
             isAuthenticated ? (
               <Layout onLogout={() => setIsAuthenticated(false)}>
                 <AddCar />
+              </Layout>
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/cars/:code"
+          element={
+            isAuthenticated ? (
+              <Layout onLogout={() => setIsAuthenticated(false)}>
+                <CarDetail />
               </Layout>
             ) : (
               <Navigate to="/login" replace />

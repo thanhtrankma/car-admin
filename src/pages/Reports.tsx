@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { TrendingUp, DollarSign, ShoppingCart, Car, Calendar } from 'lucide-react';
+import { Card, Space, Table, Row, Col, Statistic, Progress, Tag, Radio } from 'antd';
+import { DollarOutlined, CarOutlined, ShoppingCartOutlined, CalendarOutlined, ArrowUpOutlined } from '@ant-design/icons';
 
 const Reports = () => {
   const [reportType, setReportType] = useState<'sales' | 'inventory'>('sales');
@@ -58,246 +59,253 @@ const Reports = () => {
   const totalRevenue = normalizedRevenueData.reduce((sum, r) => sum + r.revenue, 0);
   const totalCarsSold = topSellingCars.reduce((sum, car) => sum + car.sales, 0);
 
+  const salesColumns = [
+    {
+      title: 'Xếp hạng',
+      key: 'rank',
+      render: (_: unknown, __: unknown, index: number): React.ReactNode => (
+        <span style={{ fontSize: 18, fontWeight: 'bold', color: '#1890ff' }}>#{index + 1}</span>
+      ),
+    },
+    {
+      title: 'Tên xe',
+      dataIndex: 'name',
+      key: 'name',
+    },
+    {
+      title: 'Số lượng bán',
+      dataIndex: 'sales',
+      key: 'sales',
+      render: (sales: number) => `${sales} xe`,
+    },
+    {
+      title: 'Doanh thu',
+      dataIndex: 'revenue',
+      key: 'revenue',
+      render: (revenue: number) => formatPrice(revenue) + ' VNĐ',
+    },
+  ];
+
+  const inventoryColumns = [
+    {
+      title: 'Mã xe',
+      dataIndex: 'code',
+      key: 'code',
+    },
+    {
+      title: 'Tên xe',
+      dataIndex: 'name',
+      key: 'name',
+    },
+    {
+      title: 'Loại xe',
+      dataIndex: 'type',
+      key: 'type',
+    },
+    {
+      title: 'Số lượng tồn',
+      dataIndex: 'quantity',
+      key: 'quantity',
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status: string) => (
+        <Tag color={status === 'Còn hàng' ? 'green' : 'red'}>
+          {status}
+        </Tag>
+      ),
+    },
+  ];
+
   return (
     <div>
-      <div className="flex justify-between items-center mb-8">
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+        justifyContent: 'space-between', 
+        alignItems: window.innerWidth < 768 ? 'flex-start' : 'center', 
+        marginBottom: 24,
+        gap: window.innerWidth < 768 ? 16 : 0,
+      }}>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-1">Báo cáo</h1>
-          <p className="text-gray-500 text-sm">Xem báo cáo doanh số và tồn kho</p>
+          <h1 style={{ fontSize: window.innerWidth < 576 ? 20 : 24, fontWeight: 'bold', marginBottom: 8 }}>Báo cáo</h1>
+          <p style={{ color: '#666', fontSize: 14 }}>Xem báo cáo doanh số và tồn kho</p>
         </div>
-        <div className="flex gap-2 bg-white p-1 rounded-xl shadow-sm border border-gray-100">
-          <button
-            onClick={() => setReportType('sales')}
-            className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${
-              reportType === 'sales'
-                ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/30'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-            }`}
-          >
-            Báo cáo doanh số
-          </button>
-          <button
-            onClick={() => setReportType('inventory')}
-            className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${
-              reportType === 'inventory'
-                ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/30'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-            }`}
-          >
-            Báo cáo tồn kho
-          </button>
-        </div>
+        <Radio.Group
+          value={reportType}
+          onChange={(e) => setReportType(e.target.value)}
+          buttonStyle="solid"
+          size={window.innerWidth < 576 ? 'small' : 'middle'}
+        >
+          <Radio.Button value="sales">Báo cáo doanh số</Radio.Button>
+          <Radio.Button value="inventory">Báo cáo tồn kho</Radio.Button>
+        </Radio.Group>
       </div>
 
-      {/* Sales Report */}
       {reportType === 'sales' && (
         <>
-          {/* Time Range Toggle */}
-          <div className="flex gap-2 mb-6 bg-white p-1 rounded-xl shadow-sm border border-gray-100 w-fit">
-            <button
-              onClick={() => setTimeRange('day')}
-              className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${
-                timeRange === 'day'
-                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/30'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
+          <Card style={{ marginBottom: 16 }}>
+            <Radio.Group
+              value={timeRange}
+              onChange={(e) => setTimeRange(e.target.value)}
+              buttonStyle="solid"
             >
-              Theo ngày
-            </button>
-            <button
-              onClick={() => setTimeRange('month')}
-              className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${
-                timeRange === 'month'
-                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/30'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              Theo tháng
-            </button>
-          </div>
+              <Radio.Button value="day">Theo ngày</Radio.Button>
+              <Radio.Button value="month">Theo tháng</Radio.Button>
+            </Radio.Group>
+          </Card>
 
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-lg hover:border-blue-200 transition-all duration-300 group">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm font-medium">Tổng doanh thu</p>
-                  <p className="text-2xl font-bold text-gray-800 mt-2">{formatPrice(totalRevenue)} VNĐ</p>
-                  <p className="text-green-600 text-sm mt-2 flex items-center">
-                    <TrendingUp className="w-4 h-4 mr-1" />
-                    +15.2%
-                  </p>
-                </div>
-                <div className="bg-green-500 p-3 rounded-full">
-                  <DollarSign className="w-6 h-6 text-white" />
-                </div>
-              </div>
-            </div>
+          <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+            <Col xs={24} sm={12} lg={6}>
+              <Card>
+                <Statistic
+                  title="Tổng doanh thu"
+                  value={totalRevenue}
+                  formatter={(value) => formatPrice(Number(value)) + ' VNĐ'}
+                  prefix={<DollarOutlined />}
+                  suffix={
+                    <span style={{ color: '#52c41a', fontSize: 12 }}>
+                      <ArrowUpOutlined /> +15.2%
+                    </span>
+                  }
+                  valueStyle={{ color: '#3f8600' }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card>
+                <Statistic
+                  title="Số lượng xe bán ra"
+                  value={totalCarsSold}
+                  prefix={<CarOutlined />}
+                  suffix={
+                    <span style={{ color: '#52c41a', fontSize: 12 }}>
+                      <ArrowUpOutlined /> +12.5%
+                    </span>
+                  }
+                  valueStyle={{ color: '#1890ff' }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card>
+                <Statistic
+                  title="Xe bán chạy nhất"
+                  value={topSellingCars[0]?.name}
+                  prefix={<ShoppingCartOutlined />}
+                  suffix={
+                    <span style={{ fontSize: 12 }}>
+                      {topSellingCars[0]?.sales} đơn
+                    </span>
+                  }
+                  valueStyle={{ fontSize: 16 }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Card>
+                <Statistic
+                  title={`Doanh thu TB/${timeRange === 'month' ? 'tháng' : 'ngày'}`}
+                  value={totalRevenue / normalizedRevenueData.length}
+                  formatter={(value) => formatPrice(Number(value)) + ' VNĐ'}
+                  prefix={<CalendarOutlined />}
+                  suffix={
+                    <span style={{ color: '#52c41a', fontSize: 12 }}>
+                      <ArrowUpOutlined /> +10.1%
+                    </span>
+                  }
+                  valueStyle={{ color: '#fa8c16' }}
+                />
+              </Card>
+            </Col>
+          </Row>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-lg hover:border-blue-200 transition-all duration-300 group">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm font-medium">Số lượng xe bán ra</p>
-                  <p className="text-2xl font-bold text-gray-800 mt-2">{totalCarsSold}</p>
-                  <p className="text-green-600 text-sm mt-2 flex items-center">
-                    <TrendingUp className="w-4 h-4 mr-1" />
-                    +12.5%
-                  </p>
-                </div>
-                <div className="bg-blue-500 p-3 rounded-full">
-                  <Car className="w-6 h-6 text-white" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-lg hover:border-blue-200 transition-all duration-300 group">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm font-medium">Xe bán chạy nhất</p>
-                  <p className="text-xl font-bold text-gray-800 mt-2">{topSellingCars[0]?.name}</p>
-                  <p className="text-blue-600 text-sm mt-2 flex items-center">
-                    <ShoppingCart className="w-4 h-4 mr-1" />
-                    {topSellingCars[0]?.sales} đơn
-                  </p>
-                </div>
-                <div className="bg-purple-500 p-3 rounded-full">
-                  <ShoppingCart className="w-6 h-6 text-white" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-lg hover:border-blue-200 transition-all duration-300 group">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm font-medium">Doanh thu TB/{timeRange === 'month' ? 'tháng' : 'ngày'}</p>
-                  <p className="text-2xl font-bold text-gray-800 mt-2">
-                    {formatPrice(totalRevenue / normalizedRevenueData.length)} VNĐ
-                  </p>
-                  <p className="text-green-600 text-sm mt-2 flex items-center">
-                    <TrendingUp className="w-4 h-4 mr-1" />
-                    +10.1%
-                  </p>
-                </div>
-                <div className="bg-orange-500 p-3 rounded-full">
-                  <Calendar className="w-6 h-6 text-white" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Revenue Chart */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-6">
+          <Card style={{ marginBottom: 24 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 24 }}>
               Doanh thu {timeRange === 'month' ? 'theo tháng' : 'theo ngày'}
             </h2>
-            <div className="space-y-4">
+            <Space direction="vertical" style={{ width: '100%' }} size="large">
               {normalizedRevenueData.map((item, index) => (
                 <div key={index}>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-700">{item.label}</span>
-                    <span className="text-sm font-bold text-gray-800">{formatPrice(item.revenue)} VNĐ</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{ fontWeight: 500 }}>{item.label}</span>
+                    <span style={{ fontWeight: 'bold' }}>{formatPrice(item.revenue)} VNĐ</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-4">
-                    <div
-                      className="bg-blue-600 h-4 rounded-full transition-all"
-                      style={{ width: `${(item.revenue / maxRevenue) * 100}%` }}
-                    ></div>
-                  </div>
+                  <Progress
+                    percent={(item.revenue / maxRevenue) * 100}
+                    strokeColor={{
+                      '0%': '#108ee9',
+                      '100%': '#87d068',
+                    }}
+                    showInfo={false}
+                  />
                 </div>
               ))}
-            </div>
-          </div>
+            </Space>
+          </Card>
 
-          {/* Top Selling Cars */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-6">Xe bán chạy nhất</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="text-left py-3 px-4 text-gray-700 font-medium">Xếp hạng</th>
-                    <th className="text-left py-3 px-4 text-gray-700 font-medium">Tên xe</th>
-                    <th className="text-left py-3 px-4 text-gray-700 font-medium">Số lượng bán</th>
-                    <th className="text-left py-3 px-4 text-gray-700 font-medium">Doanh thu</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topSellingCars.map((car, index) => (
-                    <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-3 px-4">
-                        <span className="text-lg font-bold text-blue-600">#{index + 1}</span>
-                      </td>
-                      <td className="py-3 px-4 text-gray-800 font-medium">{car.name}</td>
-                      <td className="py-3 px-4 text-gray-800">{car.sales} xe</td>
-                      <td className="py-3 px-4 text-gray-800">{formatPrice(car.revenue)} VNĐ</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <Card>
+            <h2 style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>Xe bán chạy nhất</h2>
+            <div style={{ overflowX: 'auto' }}>
+              <Table
+                columns={salesColumns}
+                dataSource={topSellingCars}
+                rowKey="name"
+                pagination={false}
+                scroll={{ x: 'max-content' }}
+              />
             </div>
-          </div>
+          </Card>
         </>
       )}
 
-      {/* Inventory Report */}
       {reportType === 'inventory' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-xl font-bold text-gray-800 mb-6">Báo cáo tồn kho</h2>
-          <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-blue-50 rounded-lg p-4">
-              <p className="text-sm text-gray-600 mb-1">Tổng số loại xe</p>
-              <p className="text-2xl font-bold text-blue-600">{inventoryData.length}</p>
-            </div>
-            <div className="bg-green-50 rounded-lg p-4">
-              <p className="text-sm text-gray-600 mb-1">Xe còn hàng</p>
-              <p className="text-2xl font-bold text-green-600">
-                {inventoryData.filter(item => item.status === 'Còn hàng').length}
-              </p>
-            </div>
-            <div className="bg-red-50 rounded-lg p-4">
-              <p className="text-sm text-gray-600 mb-1">Xe hết hàng</p>
-              <p className="text-2xl font-bold text-red-600">
-                {inventoryData.filter(item => item.status === 'Hết hàng').length}
-              </p>
-            </div>
+        <Card>
+          <h2 style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 24 }}>Báo cáo tồn kho</h2>
+          <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+            <Col xs={24} sm={8}>
+              <Card>
+                <Statistic
+                  title="Tổng số loại xe"
+                  value={inventoryData.length}
+                  valueStyle={{ color: '#1890ff' }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Card>
+                <Statistic
+                  title="Xe còn hàng"
+                  value={inventoryData.filter(item => item.status === 'Còn hàng').length}
+                  valueStyle={{ color: '#52c41a' }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Card>
+                <Statistic
+                  title="Xe hết hàng"
+                  value={inventoryData.filter(item => item.status === 'Hết hàng').length}
+                  valueStyle={{ color: '#ff4d4f' }}
+                />
+              </Card>
+            </Col>
+          </Row>
+          <div style={{ overflowX: 'auto' }}>
+            <Table
+              columns={inventoryColumns}
+              dataSource={inventoryData}
+              rowKey="code"
+              pagination={false}
+              scroll={{ x: 'max-content' }}
+            />
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left py-3 px-4 text-gray-700 font-medium">Mã xe</th>
-                  <th className="text-left py-3 px-4 text-gray-700 font-medium">Tên xe</th>
-                  <th className="text-left py-3 px-4 text-gray-700 font-medium">Loại xe</th>
-                  <th className="text-left py-3 px-4 text-gray-700 font-medium">Số lượng tồn</th>
-                  <th className="text-left py-3 px-4 text-gray-700 font-medium">Trạng thái</th>
-                </tr>
-              </thead>
-              <tbody>
-                {inventoryData.map((item) => (
-                  <tr key={item.code} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 text-gray-800 font-medium">{item.code}</td>
-                    <td className="py-3 px-4 text-gray-800">{item.name}</td>
-                    <td className="py-3 px-4 text-gray-800">{item.type}</td>
-                    <td className="py-3 px-4 text-gray-800">{item.quantity}</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        item.status === 'Còn hàng'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {item.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        </Card>
       )}
     </div>
   );
 };
 
 export default Reports;
-

@@ -1,271 +1,258 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Upload, X } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import { Form, Input, InputNumber, Select, Button, Card, Upload as AntUpload, message, Space, Row, Col, DatePicker } from 'antd';
+import type { UploadFile } from 'antd';
+import { UploadOutlined } from '@ant-design/icons';
+import dayjs, { type Dayjs } from 'dayjs';
+
+const { Option } = Select;
+
+const generateSKU = () => {
+  const prefix = 'SKU';
+  const timestamp = Date.now().toString().slice(-6);
+  const randomNum = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+  return `${prefix}${timestamp}${randomNum}`;
+};
 
 const AddCar = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    name: '',
-    type: '',
-    version: '',
-    color: '',
-    weight: '',
-    costPrice: '',
-    sellingPrice: '',
-    quantity: '',
-  });
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [form] = Form.useForm();
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [sku] = useState<string>(generateSKU());
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const removeImage = () => {
-    setImagePreview(null);
-    setImageFile(null);
-  };
-
-  const generateCode = () => {
-    const prefix = 'H';
-    const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return `${prefix}${randomNum}`;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Generate code automatically
-    const code = generateCode();
-    // In production, this would call an API to save the car
-    console.log('Car data:', { code, ...formData, image: imageFile });
-    alert('Thêm xe thành công!');
+  const handleSubmit = (values: Record<string, unknown>) => {
+    const submitData = {
+      sku,
+      ...values,
+      stockInDate: values.stockInDate ? dayjs(values.stockInDate as Dayjs).format('YYYY-MM-DD') : null,
+      images: fileList.map(file => file.originFileObj),
+    };
+    console.log('Car data:', submitData);
+    message.success('Thêm xe thành công!');
     navigate('/cars');
   };
 
-  const formatPrice = (value: string) => {
-    return value.replace(/\D/g, '');
+  const handleImageChange = (info: { fileList: UploadFile[] }) => {
+    setFileList(info.fileList);
   };
 
-  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'costPrice' | 'sellingPrice') => {
-    const value = formatPrice(e.target.value);
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const beforeUpload = () => {
+    return false;
   };
 
   return (
     <div>
-      <div className="flex items-center mb-6">
-        <button
+      <Space align="center" style={{ marginBottom: 24 }}>
+        <Button
+          icon={<ArrowLeft />}
           onClick={() => navigate('/cars')}
-          className="mr-4 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          type="text"
+        />
+        <h1 style={{ fontSize: 24, fontWeight: 'bold', margin: 0 }}>Thêm mới xe</h1>
+      </Space>
+
+      <Card>
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
         >
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
-        </button>
-        <h1 className="text-3xl font-bold text-gray-800">Thêm mới xe</h1>
-      </div>
-
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Left Column */}
-          <div className="space-y-6">
-            <div>
-              <label className="block text-gray-700 text-sm font-medium mb-2">
-                Tên xe <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:border-gray-300"
-                placeholder="Nhập tên xe"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-gray-700 text-sm font-medium mb-2">
-                Loại xe <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="type"
-                value={formData.type}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:border-gray-300 appearance-none cursor-pointer"
-                required
+          <Row gutter={[24, 0]}>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="Mã nội bộ (SKU)"
               >
-                <option value="">Chọn loại xe</option>
-                <option value="Xe số">Xe số</option>
-                <option value="Xe tay ga">Xe tay ga</option>
-                <option value="Xe côn tay">Xe côn tay</option>
-              </select>
-            </div>
+                <Input value={sku} size="large" disabled />
+              </Form.Item>
 
-            <div>
-              <label className="block text-gray-700 text-sm font-medium mb-2">
-                Phiên bản <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
+              <Form.Item
+                label={
+                  <>
+                    Tên xe <span style={{ color: 'red' }}>*</span>
+                  </>
+                }
+                name="name"
+                rules={[{ required: true, message: 'Vui lòng nhập tên xe' }]}
+              >
+                <Input placeholder="Nhập tên xe" size="large" />
+              </Form.Item>
+
+              <Form.Item
+                label={
+                  <>
+                    Loại xe <span style={{ color: 'red' }}>*</span>
+                  </>
+                }
+                name="type"
+                rules={[{ required: true, message: 'Vui lòng chọn loại xe' }]}
+              >
+                <Select placeholder="Chọn loại xe" size="large">
+                  <Option value="Xe số">Xe số</Option>
+                  <Option value="Xe tay ga">Xe tay ga</Option>
+                  <Option value="Xe côn tay">Xe côn tay</Option>
+                </Select>
+              </Form.Item>
+
+              <Form.Item
+                label={
+                  <>
+                    Phiên bản <span style={{ color: 'red' }}>*</span>
+                  </>
+                }
                 name="version"
-                value={formData.version}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:border-gray-300"
-                placeholder="Ví dụ: 2024, 2023 ABS"
-                required
-              />
-            </div>
+                rules={[{ required: true, message: 'Vui lòng nhập phiên bản' }]}
+              >
+                <Input placeholder="Ví dụ: 2024, 2023 ABS" size="large" />
+              </Form.Item>
 
-            <div>
-              <label className="block text-gray-700 text-sm font-medium mb-2">
-                Màu sắc <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="color"
-                value={formData.color}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:border-gray-300"
-                placeholder="Nhập màu sắc"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-gray-700 text-sm font-medium mb-2">
-                Trọng lượng (kg)
-              </label>
-              <input
-                type="text"
+              <Form.Item
+                label="Trọng lượng (kg)"
                 name="weight"
-                value={formData.weight}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:border-gray-300"
-                placeholder="Nhập trọng lượng"
-              />
-            </div>
-          </div>
+              >
+                <InputNumber
+                  placeholder="Nhập trọng lượng"
+                  size="large"
+                  style={{ width: '100%' }}
+                  min={0}
+                />
+              </Form.Item>
 
-          {/* Right Column */}
-          <div className="space-y-6">
-            <div>
-              <label className="block text-gray-700 text-sm font-medium mb-2">
-                Giá vốn (VNĐ) <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
+              <Form.Item
+                label="Dung tích (cc)"
+                name="capacity"
+              >
+                <InputNumber
+                  placeholder="Nhập dung tích"
+                  size="large"
+                  style={{ width: '100%' }}
+                  min={0}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label="Năm sản xuất"
+                name="manufacturingYear"
+              >
+                <InputNumber
+                  placeholder="Nhập năm sản xuất"
+                  size="large"
+                  style={{ width: '100%' }}
+                  min={1900}
+                  max={new Date().getFullYear() + 1}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label="Màu sắc"
+                name="color"
+              >
+                <Input placeholder="Nhập màu sắc" size="large" />
+              </Form.Item>
+
+              <Form.Item
+                label="Số khung"
+                name="chassisNumber"
+              >
+                <Input placeholder="Nhập số khung" size="large" />
+              </Form.Item>
+
+              <Form.Item
+                label="Số máy"
+                name="engineNumber"
+              >
+                <Input placeholder="Nhập số máy" size="large" />
+              </Form.Item>
+            </Col>
+
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="Ngày nhập kho"
+                name="stockInDate"
+              >
+                <DatePicker
+                  placeholder="Chọn ngày nhập kho"
+                  size="large"
+                  style={{ width: '100%' }}
+                  format="DD/MM/YYYY"
+                />
+              </Form.Item>
+
+              <Form.Item
+                label="Giá vốn (VNĐ)"
                 name="costPrice"
-                value={formData.costPrice ? new Intl.NumberFormat('vi-VN').format(Number(formData.costPrice)) : ''}
-                onChange={(e) => handlePriceChange(e, 'costPrice')}
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:border-gray-300"
-                placeholder="Nhập giá vốn"
-                required
-              />
-            </div>
+              >
+                <InputNumber
+                  placeholder="Nhập giá vốn"
+                  size="large"
+                  style={{ width: '100%' }}
+                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  min={0}
+                />
+              </Form.Item>
 
-            <div>
-              <label className="block text-gray-700 text-sm font-medium mb-2">
-                Giá bán (VNĐ) <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
+              <Form.Item
+                label="Giá bán (VNĐ)"
                 name="sellingPrice"
-                value={formData.sellingPrice ? new Intl.NumberFormat('vi-VN').format(Number(formData.sellingPrice)) : ''}
-                onChange={(e) => handlePriceChange(e, 'sellingPrice')}
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:border-gray-300"
-                placeholder="Nhập giá bán"
-                required
-              />
-            </div>
+              >
+                <InputNumber
+                  placeholder="Nhập giá bán"
+                  size="large"
+                  style={{ width: '100%' }}
+                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  min={0}
+                />
+              </Form.Item>
 
-            <div>
-              <label className="block text-gray-700 text-sm font-medium mb-2">
-                Số lượng nhập <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                name="quantity"
-                value={formData.quantity}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:border-gray-300"
-                placeholder="Nhập số lượng"
-                min="1"
-                required
-              />
-            </div>
+              <Form.Item
+                label="Trạng thái trong kho"
+                name="stockStatus"
+              >
+                <Select placeholder="Chọn trạng thái" size="large">
+                  <Option value="Còn hàng">Còn hàng</Option>
+                  <Option value="Hết hàng">Hết hàng</Option>
+                  <Option value="Sắp về">Sắp về</Option>
+                  <Option value="Đang bảo hành">Đang bảo hành</Option>
+                </Select>
+              </Form.Item>
 
-            <div>
-              <label className="block text-gray-700 text-sm font-medium mb-2">
-                Hình ảnh xe
-              </label>
-              {imagePreview ? (
-                <div className="relative">
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="w-full h-64 object-cover rounded-xl border-2 border-gray-200 shadow-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={removeImage}
-                    className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-200 border-dashed rounded-xl cursor-pointer hover:bg-gray-50 hover:border-blue-300 transition-all duration-200 bg-gray-50/50">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="w-10 h-10 mb-3 text-gray-400" />
-                    <p className="mb-2 text-sm text-gray-500">
-                      <span className="font-semibold">Click để upload</span> hoặc kéo thả
-                    </p>
-                    <p className="text-xs text-gray-500">PNG, JPG, GIF (MAX. 5MB)</p>
-                  </div>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                  />
-                </label>
-              )}
-            </div>
-          </div>
-        </div>
+              <Form.Item
+                label="Hình ảnh"
+                name="images"
+              >
+                <AntUpload
+                  listType="picture-card"
+                  fileList={fileList}
+                  onChange={handleImageChange}
+                  beforeUpload={beforeUpload}
+                  multiple
+                  accept="image/*"
+                >
+                  {fileList.length < 10 && (
+                    <div>
+                      <UploadOutlined />
+                      <div style={{ marginTop: 8 }}>Upload</div>
+                    </div>
+                  )}
+                </AntUpload>
+              </Form.Item>
+            </Col>
+          </Row>
 
-        {/* Action Buttons */}
-        <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={() => navigate('/cars')}
-            className="px-6 py-2.5 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 font-medium shadow-sm"
-          >
-            Hủy
-          </button>
-          <button
-            type="submit"
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-md"
-          >
-            Lưu
-          </button>
-        </div>
-      </form>
+          <Form.Item style={{ marginTop: 24, marginBottom: 0 }}>
+            <Space style={{ width: '100%', justifyContent: 'flex-end' }} wrap>
+              <Button onClick={() => navigate('/cars')}>
+                Hủy
+              </Button>
+              <Button type="primary" htmlType="submit">
+                Lưu
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Card>
     </div>
   );
 };
 
 export default AddCar;
-
