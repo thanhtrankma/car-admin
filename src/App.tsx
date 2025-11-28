@@ -1,5 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { message } from 'antd';
+import { logout as logoutService } from './services/authService';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import CarManagement from './pages/CarManagement';
@@ -7,13 +9,19 @@ import AddCar from './pages/AddCar';
 import CarDetail from './pages/CarDetail';
 import OrderManagement from './pages/OrderManagement';
 import CustomerManagement from './pages/CustomerManagement';
+import AccountManagement from './pages/AccountManagement';
 import StockIn from './pages/StockIn';
 import Reports from './pages/Reports';
+import Profile from './pages/Profile';
 import Layout from './components/Layout';
+import AdminRoute from './middleware/adminOnly';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem('isAuthenticated') === 'true';
+    return (
+      localStorage.getItem('isAuthenticated') === 'true' ||
+      Boolean(localStorage.getItem('accessToken'))
+    );
   });
 
   useEffect(() => {
@@ -23,6 +31,21 @@ function App() {
   const handleLogin = (role: 'manager' | 'staff') => {
     localStorage.setItem('userRole', role);
     setIsAuthenticated(true);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logoutService();
+      message.success('Đăng xuất thành công');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Đăng xuất thất bại';
+      message.error(errorMessage);
+    } finally {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('userRole');
+      setIsAuthenticated(false);
+    }
   };
 
   return (
@@ -42,7 +65,7 @@ function App() {
           path="/"
           element={
             isAuthenticated ? (
-              <Layout onLogout={() => setIsAuthenticated(false)}>
+              <Layout onLogout={handleLogout}>
                 <Dashboard />
               </Layout>
             ) : (
@@ -54,7 +77,7 @@ function App() {
           path="/dashboard"
           element={
             isAuthenticated ? (
-              <Layout onLogout={() => setIsAuthenticated(false)}>
+              <Layout onLogout={handleLogout}>
                 <Dashboard />
               </Layout>
             ) : (
@@ -66,7 +89,7 @@ function App() {
           path="/cars"
           element={
             isAuthenticated ? (
-              <Layout onLogout={() => setIsAuthenticated(false)}>
+              <Layout onLogout={handleLogout}>
                 <CarManagement />
               </Layout>
             ) : (
@@ -78,7 +101,7 @@ function App() {
           path="/cars/add"
           element={
             isAuthenticated ? (
-              <Layout onLogout={() => setIsAuthenticated(false)}>
+              <Layout onLogout={handleLogout}>
                 <AddCar />
               </Layout>
             ) : (
@@ -90,8 +113,20 @@ function App() {
           path="/cars/:code"
           element={
             isAuthenticated ? (
-              <Layout onLogout={() => setIsAuthenticated(false)}>
+              <Layout onLogout={handleLogout}>
                 <CarDetail />
+              </Layout>
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/cars/:code/edit"
+          element={
+            isAuthenticated ? (
+              <Layout onLogout={handleLogout}>
+                <AddCar />
               </Layout>
             ) : (
               <Navigate to="/login" replace />
@@ -102,7 +137,7 @@ function App() {
           path="/orders"
           element={
             isAuthenticated ? (
-              <Layout onLogout={() => setIsAuthenticated(false)}>
+              <Layout onLogout={handleLogout}>
                 <OrderManagement />
               </Layout>
             ) : (
@@ -114,7 +149,7 @@ function App() {
           path="/customers"
           element={
             isAuthenticated ? (
-              <Layout onLogout={() => setIsAuthenticated(false)}>
+              <Layout onLogout={handleLogout}>
                 <CustomerManagement />
               </Layout>
             ) : (
@@ -126,7 +161,7 @@ function App() {
           path="/stock-in"
           element={
             isAuthenticated ? (
-              <Layout onLogout={() => setIsAuthenticated(false)}>
+              <Layout onLogout={handleLogout}>
                 <StockIn />
               </Layout>
             ) : (
@@ -138,8 +173,34 @@ function App() {
           path="/reports"
           element={
             isAuthenticated ? (
-              <Layout onLogout={() => setIsAuthenticated(false)}>
+              <Layout onLogout={handleLogout}>
                 <Reports />
+              </Layout>
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/accounts"
+          element={
+            isAuthenticated ? (
+              <AdminRoute>
+                <Layout onLogout={handleLogout}>
+                  <AccountManagement />
+                </Layout>
+              </AdminRoute>
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            isAuthenticated ? (
+              <Layout onLogout={handleLogout}>
+                <Profile />
               </Layout>
             ) : (
               <Navigate to="/login" replace />

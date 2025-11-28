@@ -1,11 +1,14 @@
-import { useRef, useState } from 'react';
-import { Button, Card, Input, Select, Table, Space, Modal, Form, InputNumber, message } from 'antd';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Button, Card, Input, Select, Table, Space, Modal, Form, InputNumber, message, Divider, Row, Col, Typography, Spin } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, DownloadOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, DownloadOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
+import { listProducts, type ProductDto } from '../services/productService';
+import { listInvoices, createInvoice, getInvoiceById, type InvoiceDto, type InvoiceDetailResponse } from '../services/invoiceService';
 
 const { Option } = Select;
 
 interface OrderItem {
+  productId: string;
   carCode: string;
   carName: string;
   quantity: number;
@@ -13,67 +16,108 @@ interface OrderItem {
   total: number;
 }
 
-interface Invoice {
-  id: string;
-  customerName: string;
-  customerPhone: string;
-  items: OrderItem[];
-  subtotal: number;
-  vat: number;
-  total: number;
-  createdAt: string;
-}
-
 interface OrderFormValues {
   customerName: string;
   customerPhone: string;
-  carCode?: string;
+  customerEmail?: string;
+  customerAddress?: string;
+  productId?: string;
   quantity?: number;
 }
 
 const OrderManagement = () => {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceDto[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form] = Form.useForm();
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
-  const [searchField, setSearchField] = useState<'id' | 'customerName' | 'customerPhone'>('id');
   const [searchValue, setSearchValue] = useState('');
   const [timeFilter, setTimeFilter] = useState<'all' | 'day' | 'week' | 'month'>('all');
-  const invoiceCounterRef = useRef(0);
+  const [products, setProducts] = useState<ProductDto[]>([]);
+  const [productLoading, setProductLoading] = useState(false);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [creatingInvoice, setCreatingInvoice] = useState(false);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [totalInvoices, setTotalInvoices] = useState(0);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [invoiceDetail, setInvoiceDetail] = useState<InvoiceDetailResponse | null>(null);
+  const { Title, Text } = Typography;
 
-  const availableCars = [
-    { code: 'H001', name: 'Wave Alpha', price: 19380000 },
-    { code: 'H002', name: 'Vision', price: 32490000 },
-    { code: 'H003', name: 'SH Mode', price: 58350000 },
-    { code: 'H004', name: 'Air Blade', price: 45190000 },
-    { code: 'H005', name: 'Winner X', price: 48210000 },
-  ];
+  const fetchProducts = useCallback(async () => {
+    setProductLoading(true);
+    try {
+      const response = await listProducts({
+        page: 1,
+        limit: 100,
+        sortBy: 'created_at',
+        sortOrder: 'desc',
+      });
+      setProducts(response.data);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Không thể tải danh sách sản phẩm';
+      message.error(errorMessage);
+    } finally {
+      setProductLoading(false);
+    }
+  }, []);
 
-  const addItem = (values: Pick<OrderFormValues, 'carCode' | 'quantity'>) => {
-    const car = availableCars.find(c => c.code === values.carCode);
-    if (!car) return;
+  const fetchInvoices = useCallback(async () => {
+    setInvoiceLoading(true);
+    try {
+      const response = await listInvoices({
+        page,
+        limit,
+        sortBy: 'created_at',
+        sortOrder: 'desc',
+      });
+      setInvoices(response.data);
+      setTotalInvoices(response.pagination.total);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Không thể tải danh sách hóa đơn';
+      message.error(errorMessage);
+    } finally {
+      setInvoiceLoading(false);
+    }
+  }, [page, limit]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  useEffect(() => {
+    fetchInvoices();
+  }, [fetchInvoices]);
+
+  const addItem = (values: Pick<OrderFormValues, 'productId' | 'quantity'>) => {
+    const product = products.find((c) => c.id === values.productId);
+    if (!product) return;
     const quantity = values.quantity || 1;
 
-    const existingItem = orderItems.find(item => item.carCode === values.carCode);
+    const existingItem = orderItems.find(item => item.productId === product.id);
     if (existingItem) {
       setOrderItems(orderItems.map(item =>
-        item.carCode === values.carCode
+        item.productId === product.id
           ? { ...item, quantity: item.quantity + quantity, total: (item.quantity + quantity) * item.unitPrice }
           : item
       ));
     } else {
-      setOrderItems([...orderItems, {
-        carCode: car.code,
-        carName: car.name,
-        quantity,
-        unitPrice: car.price,
-        total: quantity * car.price,
-      }]);
+      setOrderItems([
+        ...orderItems,
+        {
+          productId: product.id,
+          carCode: product.code,
+          carName: product.name,
+          quantity,
+          unitPrice: product.price,
+          total: quantity * product.price,
+        },
+      ]);
     }
-    form.setFieldsValue({ carCode: undefined, quantity: 1 });
+    form.setFieldsValue({ productId: undefined, quantity: 1 });
   };
 
-  const isWithinTimeFilter = (dateString: string) => {
+  const isWithinTimeFilter = useCallback((dateString: string) => {
     if (timeFilter === 'all') return true;
     const targetDate = new Date(dateString);
     const now = new Date();
@@ -97,16 +141,21 @@ const OrderManagement = () => {
       targetDate.getMonth() === now.getMonth() &&
       targetDate.getFullYear() === now.getFullYear()
     );
-  };
+  }, [timeFilter]);
 
-  const filteredInvoices = invoices.filter((invoice) => {
-    const keyword = searchValue.trim().toLowerCase();
-    const matchesSearch = keyword
-      ? String(invoice[searchField]).toLowerCase().includes(keyword)
-      : true;
+  const filteredInvoices = useMemo(
+    () =>
+      invoices.filter((invoice) => {
+        const keyword = searchValue.trim().toLowerCase();
+        const matchesSearch = keyword
+          ? invoice.invoiceNumber?.toLowerCase().includes(keyword) ||
+            invoice.customerName?.toLowerCase().includes(keyword)
+          : true;
 
-    return matchesSearch && isWithinTimeFilter(invoice.createdAt);
-  });
+        return matchesSearch && isWithinTimeFilter(invoice.created_at);
+      }),
+    [invoices, searchValue, isWithinTimeFilter]
+  );
 
   const removeItem = (carCode: string) => {
     setOrderItems(orderItems.filter(item => item.carCode !== carCode));
@@ -133,54 +182,100 @@ const OrderManagement = () => {
       message.warning('Vui lòng thêm ít nhất một sản phẩm');
       return;
     }
-    invoiceCounterRef.current += 1;
-
-    const newInvoice: Invoice = {
-      id: `INV${invoiceCounterRef.current}`,
+    setCreatingInvoice(true);
+    const payload = {
       customerName: values.customerName,
       customerPhone: values.customerPhone,
-      items: [...orderItems],
-      subtotal,
-      vat,
-      total,
-      createdAt: new Date().toISOString(),
+      customerEmail: values.customerEmail,
+      customerAddress: values.customerAddress,
+      items: orderItems.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+      })),
     };
 
-    setInvoices([newInvoice, ...invoices]);
-    setIsModalOpen(false);
-    setOrderItems([]);
-    form.resetFields();
-    message.success('Tạo hóa đơn thành công!');
+    createInvoice(payload)
+      .then(() => {
+        message.success('Tạo hóa đơn thành công!');
+        setIsModalOpen(false);
+        setOrderItems([]);
+        form.resetFields();
+        fetchInvoices();
+      })
+      .catch((error) => {
+        const errorMessage = error instanceof Error ? error.message : 'Không thể tạo hóa đơn';
+        message.error(errorMessage);
+      })
+      .finally(() => {
+        setCreatingInvoice(false);
+      });
   };
 
-  const handleExport = (invoice: Invoice) => {
-    const invoiceText = `
+  const handleExport = async (invoice: InvoiceDto) => {
+    try {
+      const detail = await getInvoiceById(invoice.id);
+      const invoiceText = `
 HÓA ĐƠN BÁN HÀNG
-Mã hóa đơn: ${invoice.id}
-Ngày tạo: ${new Date(invoice.createdAt).toLocaleString('vi-VN')}
+Mã hóa đơn: ${detail.invoice.invoiceNumber}
+Ngày tạo: ${new Date(detail.invoice.created_at).toLocaleString('vi-VN')}
 
-Khách hàng: ${invoice.customerName}
-SĐT: ${invoice.customerPhone}
+Khách hàng: ${detail.invoice.customerName}
+SĐT: ${detail.invoice.customerPhone}
+Email: ${detail.invoice.customerEmail || ''}
+Địa chỉ: ${detail.invoice.customerAddress || ''}
 
 Chi tiết:
-${invoice.items.map(item => `
-  ${item.carName} (${item.carCode})
-  Số lượng: ${item.quantity} x ${formatPrice(item.unitPrice)} = ${formatPrice(item.total)} VNĐ
+${detail.details.map(item => `
+  ${item.productName} (${item.productSku})
+  Số lượng: ${item.quantity} x ${formatPrice(item.productPrice)} = ${formatPrice(item.totalPrice)} VNĐ
 `).join('')}
 
-Tạm tính: ${formatPrice(invoice.subtotal)} VNĐ
-VAT (10%): ${formatPrice(invoice.vat)} VNĐ
-TỔNG CỘNG: ${formatPrice(invoice.total)} VNĐ
-    `;
+TỔNG CỘNG: ${formatPrice(detail.invoice.totalAmount)} VNĐ
+      `;
 
-    const blob = new Blob([invoiceText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `HoaDon_${invoice.id}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-    message.success('Xuất hóa đơn thành công!');
+      const blob = new Blob([invoiceText], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `HoaDon_${detail.invoice.invoiceNumber}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+      message.success('Xuất hóa đơn thành công!');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Không thể xuất hóa đơn';
+      message.error(errorMessage);
+    }
+  };
+
+  const handleViewDetail = async (invoice: InvoiceDto) => {
+    setDetailModalOpen(true);
+    setDetailLoading(true);
+    try {
+      const detail = await getInvoiceById(invoice.id);
+      setInvoiceDetail(detail);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Không thể tải chi tiết hóa đơn';
+      message.error(errorMessage);
+      setDetailModalOpen(false);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const invoiceSubtotal = useMemo(() => {
+    if (!invoiceDetail?.details) return 0;
+    return invoiceDetail.details.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
+  }, [invoiceDetail]);
+
+  const vatAmount = useMemo(() => Math.round(invoiceSubtotal * 0.1), [invoiceSubtotal]);
+  const grandTotal = useMemo(() => {
+    if (invoiceDetail?.invoice?.totalAmount) return invoiceDetail.invoice.totalAmount;
+    return invoiceSubtotal + vatAmount;
+  }, [invoiceDetail, invoiceSubtotal, vatAmount]);
+
+  const handleCloseDetail = () => {
+    setDetailModalOpen(false);
+    setInvoiceDetail(null);
   };
 
   const formatPrice = (price: number) => {
@@ -241,11 +336,11 @@ TỔNG CỘNG: ${formatPrice(invoice.total)} VNĐ
     },
   ];
 
-  const invoiceColumns: ColumnsType<Invoice> = [
+  const invoiceColumns: ColumnsType<InvoiceDto> = [
     {
       title: 'Mã hóa đơn',
-      dataIndex: 'id',
-      key: 'id',
+      dataIndex: 'invoiceNumber',
+      key: 'invoiceNumber',
     },
     {
       title: 'Khách hàng',
@@ -259,33 +354,42 @@ TỔNG CỘNG: ${formatPrice(invoice.total)} VNĐ
     },
     {
       title: 'Số sản phẩm',
-      dataIndex: 'items',
-      key: 'items',
-      render: (items) => items.length,
+      dataIndex: 'productCount',
+      key: 'productCount',
+      render: (count) => count ?? 0,
     },
     {
       title: 'Tổng tiền',
-      dataIndex: 'total',
-      key: 'total',
+      dataIndex: 'totalAmount',
+      key: 'totalAmount',
       render: (total) => <strong>{formatPrice(total)} VNĐ</strong>,
     },
     {
       title: 'Ngày tạo',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
+      dataIndex: 'created_at',
+      key: 'created_at',
       render: (date) => formatDate(date),
     },
     {
       title: 'Thao tác',
       key: 'action',
       render: (_, record) => (
-        <Button
-          type="link"
-          icon={<DownloadOutlined />}
-          onClick={() => handleExport(record)}
-        >
-          Xuất
-        </Button>
+        <Space>
+          <Button
+            type="link"
+            icon={<EyeOutlined />}
+            onClick={() => handleViewDetail(record)}
+          >
+            Xem
+          </Button>
+          <Button
+            type="link"
+            icon={<DownloadOutlined />}
+            onClick={() => handleExport(record)}
+          >
+            Xuất
+          </Button>
+        </Space>
       ),
     },
   ];
@@ -347,15 +451,38 @@ TỔNG CỘNG: ${formatPrice(invoice.total)} VNĐ
             <Input placeholder="Nhập số điện thoại" size="large" />
           </Form.Item>
 
+          <Form.Item
+            label="Email khách hàng"
+            name="customerEmail"
+            rules={[{ type: 'email', message: 'Email không hợp lệ' }]}
+          >
+            <Input placeholder="Nhập email khách hàng" size="large" />
+          </Form.Item>
+
+          <Form.Item
+            label="Địa chỉ khách hàng"
+            name="customerAddress"
+          >
+            <Input placeholder="Nhập địa chỉ khách hàng" size="large" />
+          </Form.Item>
+
           <Card title="Thêm sản phẩm" style={{ marginBottom: 16 }}>
             <Form.Item
               label="Chọn xe"
-              name="carCode"
+              name="productId"
+              rules={[{ required: true, message: 'Vui lòng chọn xe' }]}
             >
-              <Select placeholder="Chọn xe" size="large" style={{ width: '100%' }}>
-                {availableCars.map(car => (
-                  <Option key={car.code} value={car.code}>
-                    {car.name} ({car.code}) - {formatPrice(car.price)} VNĐ
+              <Select
+                placeholder="Chọn xe"
+                size="large"
+                style={{ width: '100%' }}
+                loading={productLoading}
+                showSearch
+                optionFilterProp="label"
+              >
+                {products.map((product) => (
+                  <Option key={product.id} value={product.id} label={`${product.name} ${product.code}`}>
+                    {product.name} ({product.code}) - {formatPrice(product.price)} VNĐ
                   </Option>
                 ))}
               </Select>
@@ -370,7 +497,7 @@ TỔNG CỘNG: ${formatPrice(invoice.total)} VNĐ
 
             <Form.Item>
               <Button type="primary" onClick={() => {
-                form.validateFields(['carCode', 'quantity']).then((values) => {
+                form.validateFields(['productId', 'quantity']).then((values) => {
                   addItem(values);
                 });
               }}>
@@ -385,7 +512,7 @@ TỔNG CỘNG: ${formatPrice(invoice.total)} VNĐ
                 <Table
                   columns={itemColumns}
                   dataSource={orderItems}
-                  rowKey="carCode"
+                  rowKey="productId"
                   pagination={false}
                   size="small"
                   scroll={{ x: 'max-content' }}
@@ -424,7 +551,7 @@ TỔNG CỘNG: ${formatPrice(invoice.total)} VNĐ
               }}>
                 Hủy
               </Button>
-              <Button type="primary" htmlType="submit">
+              <Button type="primary" htmlType="submit" loading={creatingInvoice}>
                 Lưu hóa đơn
               </Button>
             </Space>
@@ -434,7 +561,7 @@ TỔNG CỘNG: ${formatPrice(invoice.total)} VNĐ
 
       <Card style={{ marginBottom: 16 }}>
         <Space direction={window.innerWidth < 768 ? 'vertical' : 'horizontal'} size="middle" style={{ width: '100%' }}>
-          <Select
+          {/* <Select
             value={searchField}
             onChange={(value) => setSearchField(value)}
             style={{ minWidth: 160 }}
@@ -443,7 +570,7 @@ TỔNG CỘNG: ${formatPrice(invoice.total)} VNĐ
             <Option value="id">Mã hóa đơn</Option>
             <Option value="customerName">Tên khách hàng</Option>
             <Option value="customerPhone">SĐT</Option>
-          </Select>
+          </Select> */}
           <Input
             placeholder="Nhập từ khóa tìm kiếm"
             value={searchValue}
@@ -470,13 +597,161 @@ TỔNG CỘNG: ${formatPrice(invoice.total)} VNĐ
             columns={invoiceColumns}
             dataSource={filteredInvoices}
             rowKey="id"
+            loading={invoiceLoading}
             scroll={{ x: 'max-content' }}
             locale={{
               emptyText: 'Chưa có hóa đơn nào. Hãy tạo hóa đơn mới!',
             }}
+            pagination={{
+              current: page,
+              pageSize: limit,
+              total: totalInvoices,
+              showSizeChanger: true,
+              onChange: (newPage, newPageSize) => {
+                setPage(newPage);
+                setLimit(newPageSize || limit);
+              },
+              showTotal: (value) => `Tổng ${value} hóa đơn`,
+            }}
           />
         </div>
       </Card>
+
+      <Modal
+        open={detailModalOpen}
+        onCancel={handleCloseDetail}
+        footer={null}
+        width={window.innerWidth < 768 ? '95%' : 720}
+        title="Chi tiết hóa đơn"
+      >
+        <Spin spinning={detailLoading}>
+          {invoiceDetail ? (
+            <div style={{ padding: window.innerWidth < 768 ? 8 : 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div>
+                  <Title level={4} style={{ marginBottom: 0 }}>
+                    Honda Dealership
+                  </Title>
+                  <Text>123 Nguyễn Văn Linh, TP.HCM</Text>
+                  <br />
+                  <Text>Hotline: 1900 1234</Text>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <Text>Mã hóa đơn</Text>
+                  <Title level={5} style={{ margin: 0 }}>
+                    {invoiceDetail.invoice.invoiceNumber}
+                  </Title>
+                  <Text>
+                    Ngày lập: {formatDate(invoiceDetail.invoice.created_at)}
+                  </Text>
+                </div>
+              </div>
+
+              <Divider dashed />
+
+              <Row gutter={32} style={{ marginBottom: 16 }}>
+                <Col xs={24} md={12}>
+                  <Title level={5}>Thông tin người mua</Title>
+                  <Space direction="vertical" size={2}>
+                    <Text strong>{invoiceDetail.invoice.customerName}</Text>
+                    <Text>SĐT: {invoiceDetail.invoice.customerPhone}</Text>
+                    {invoiceDetail.invoice.customerEmail && <Text>Email: {invoiceDetail.invoice.customerEmail}</Text>}
+                    {invoiceDetail.invoice.customerAddress && <Text>Địa chỉ: {invoiceDetail.invoice.customerAddress}</Text>}
+                  </Space>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Title level={5}>Thông tin thanh toán</Title>
+                  <Space direction="vertical" size={2}>
+                    <Text>Hình thức: Chuyển khoản/ Tiền mặt</Text>
+                    <Text>Nhân viên: System</Text>
+                    <Text>Trạng thái: Đã tạo</Text>
+                  </Space>
+                </Col>
+              </Row>
+
+              <Divider />
+
+              <div style={{ overflowX: 'auto' }}>
+                <table
+                  style={{
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                    marginBottom: 16,
+                  }}
+                >
+                  <thead>
+                    <tr style={{ backgroundColor: '#f5f5f5' }}>
+                      <th style={{ padding: 8, border: '1px solid #e8e8e8', textAlign: 'left' }}>#</th>
+                      <th style={{ padding: 8, border: '1px solid #e8e8e8', textAlign: 'left' }}>Sản phẩm</th>
+                      <th style={{ padding: 8, border: '1px solid #e8e8e8', textAlign: 'center' }}>Số lượng</th>
+                      <th style={{ padding: 8, border: '1px solid #e8e8e8', textAlign: 'right' }}>Đơn giá</th>
+                      <th style={{ padding: 8, border: '1px solid #e8e8e8', textAlign: 'right' }}>Thành tiền</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoiceDetail.details.map((item, index) => (
+                      <tr key={item.id}>
+                        <td style={{ padding: 8, border: '1px solid #e8e8e8' }}>{index + 1}</td>
+                        <td style={{ padding: 8, border: '1px solid #e8e8e8' }}>
+                          <Text strong>{item.productName}</Text>
+                          <br />
+                          <Text type="secondary">SKU: {item.productSku}</Text>
+                        </td>
+                        <td style={{ padding: 8, border: '1px solid #e8e8e8', textAlign: 'center' }}>
+                          {item.quantity}
+                        </td>
+                        <td style={{ padding: 8, border: '1px solid #e8e8e8', textAlign: 'right' }}>
+                          {formatPrice(item.productPrice)} VNĐ
+                        </td>
+                        <td style={{ padding: 8, border: '1px solid #e8e8e8', textAlign: 'right' }}>
+                          {formatPrice(item.totalPrice)} VNĐ
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <Row justify="end">
+                <Col xs={24} md={12}>
+                  <div style={{ padding: 16, background: '#fafafa', borderRadius: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <Text>Tạm tính:</Text>
+                      <Text strong>{formatPrice(invoiceSubtotal)} VNĐ</Text>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <Text>VAT (10%):</Text>
+                      <Text strong>{formatPrice(vatAmount)} VNĐ</Text>
+                    </div>
+                    <Divider style={{ margin: '8px 0' }} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Text strong style={{ fontSize: 16 }}>TỔNG CỘNG:</Text>
+                      <Text strong style={{ fontSize: 18, color: '#d4380d' }}>
+                        {formatPrice(grandTotal)} VNĐ
+                      </Text>
+                    </div>
+                  </div>
+                </Col>
+              </Row>
+
+              <Divider dashed />
+
+              <Row gutter={32}>
+                <Col xs={24} md={12}>
+                  <Text>Người lập hóa đơn</Text>
+                  <div style={{ height: 60, border: '1px dashed #d9d9d9', marginTop: 8, borderRadius: 6 }} />
+                </Col>
+                <Col xs={24} md={12}>
+                  <Text>Khách hàng</Text>
+                  <div style={{ height: 60, border: '1px dashed #d9d9d9', marginTop: 8, borderRadius: 6 }} />
+                </Col>
+              </Row>
+            </div>
+          ) : (
+            !detailLoading && <Text>Không có dữ liệu hóa đơn</Text>
+          )}
+        </Spin>
+      </Modal>
     </div>
   );
 };

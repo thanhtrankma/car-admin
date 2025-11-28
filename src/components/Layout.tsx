@@ -1,6 +1,6 @@
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Layout as AntLayout, Menu, Button, Drawer } from 'antd';
+import { Layout as AntLayout, Menu, Button, Drawer, Avatar, Tooltip } from 'antd';
 import type { MenuProps } from 'antd';
 import {
   DashboardOutlined,
@@ -11,6 +11,8 @@ import {
   BarChartOutlined,
   LogoutOutlined,
   MenuOutlined,
+  IdcardOutlined,
+  TeamOutlined,
 } from '@ant-design/icons';
 
 const { Header, Sider, Content } = AntLayout;
@@ -26,6 +28,14 @@ const Layout = ({ children, onLogout }: LayoutProps) => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 992);
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const stored = localStorage.getItem('currentUser');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
 
   useEffect(() => {
     const handleResize = () => {
@@ -39,38 +49,69 @@ const Layout = ({ children, onLogout }: LayoutProps) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const menuItems: MenuProps['items'] = [
-    {
-      key: '/dashboard',
-      icon: <DashboardOutlined />,
-      label: 'Tổng quan',
-    },
-    {
-      key: '/cars',
-      icon: <CarOutlined />,
-      label: 'Quản lý xe',
-    },
-    {
-      key: '/stock-in',
-      icon: <InboxOutlined />,
-      label: 'Nhập kho',
-    },
-    {
-      key: '/orders',
-      icon: <ShoppingCartOutlined />,
-      label: 'Quản lý đơn hàng',
-    },
-    {
-      key: '/customers',
-      icon: <UserOutlined />,
-      label: 'Khách hàng',
-    },
-    {
-      key: '/reports',
-      icon: <BarChartOutlined />,
-      label: 'Báo cáo',
-    },
-  ];
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === 'currentUser') {
+        try {
+          setCurrentUser(event.newValue ? JSON.parse(event.newValue) : null);
+        } catch {
+          setCurrentUser(null);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  const menuItems = useMemo<MenuProps['items']>(() => {
+    const items: MenuProps['items'] = [
+      {
+        key: '/dashboard',
+        icon: <DashboardOutlined />,
+        label: 'Tổng quan',
+      },
+      {
+        key: '/cars',
+        icon: <CarOutlined />,
+        label: 'Quản lý xe',
+      },
+      {
+        key: '/stock-in',
+        icon: <InboxOutlined />,
+        label: 'Nhập kho',
+      },
+      {
+        key: '/orders',
+        icon: <ShoppingCartOutlined />,
+        label: 'Quản lý đơn hàng',
+      },
+      {
+        key: '/customers',
+        icon: <UserOutlined />,
+        label: 'Khách hàng',
+      },
+      ...(currentUser?.role === 'ADMIN'
+        ? [
+            {
+              key: '/accounts',
+              icon: <TeamOutlined />,
+              label: 'Quản lý tài khoản',
+            },
+          ]
+        : []),
+      {
+        key: '/reports',
+        icon: <BarChartOutlined />,
+        label: 'Báo cáo',
+      },
+      {
+        key: '/profile',
+        icon: <IdcardOutlined />,
+        label: 'Thông tin cá nhân',
+      },
+    ];
+    return items;
+  }, [currentUser?.role]);
 
   const getSelectedKeys = () => {
     if (location.pathname === '/dashboard' || location.pathname === '/') {
@@ -116,7 +157,7 @@ const Layout = ({ children, onLogout }: LayoutProps) => {
           }}
           theme="light"
           trigger={null}
-        >
+          >
         <div style={{ padding: 16, borderBottom: '1px solid #f0f0f0' }}>
           {!collapsed && (
             <>
@@ -188,7 +229,7 @@ const Layout = ({ children, onLogout }: LayoutProps) => {
             Đăng xuất
           </Button>
         }
-      >
+        >
         {menuContent}
       </Drawer>
 
@@ -230,6 +271,25 @@ const Layout = ({ children, onLogout }: LayoutProps) => {
               justifyContent: 'center',
             }}
           />
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+            {!isMobile && currentUser && (
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontWeight: 600 }}>{currentUser.fullName || currentUser.username}</div>
+              </div>
+            )}
+            <Tooltip title="Thông tin cá nhân">
+              <Avatar
+                size="large"
+                style={{ backgroundColor: '#1890ff', cursor: 'pointer' }}
+                onClick={() => navigate('/profile')}
+              >
+                {(currentUser?.fullName || currentUser?.username || 'U')
+                  .toString()
+                  .charAt(0)
+                  .toUpperCase()}
+              </Avatar>
+            </Tooltip>
+          </div>
         </Header>
         <Content
           style={{

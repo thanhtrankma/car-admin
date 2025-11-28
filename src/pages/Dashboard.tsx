@@ -8,7 +8,7 @@ const CustomPieTooltip = ({ active, payload }: { active?: boolean; payload?: Arr
     const data = payload[0]?.payload;
     if (data) {
       return (
-        <div style={{ backgroundColor: 'white', padding: 12, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+        <div style={{ backgroundColor: 'white', padding: 12, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.15)', zIndex: 2000 }}>
           <p style={{ fontWeight: 'bold', marginBottom: 4 }}>{data.name}</p>
           <p style={{ fontSize: 12, marginBottom: 4 }}>
             Giá trị: <span style={{ fontWeight: 500 }}>{data.value} triệu VNĐ</span>
@@ -142,7 +142,7 @@ const Dashboard = () => {
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} lg={12}>
           <Card title={`Biểu đồ doanh thu ${timeRange === 'month' ? 'theo tháng' : 'theo năm'}`}>
-            <div style={{ height: 320 }}>
+            <div style={{ height: 420 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={revenueData}
@@ -175,7 +175,7 @@ const Dashboard = () => {
                     cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
                   />
                   <Legend
-                    wrapperStyle={{ paddingTop: '20px' }}
+                    // wrapperStyle={{ paddingTop: '20px' }}
                     iconType="rect"
                   />
                   <Bar
@@ -204,7 +204,7 @@ const Dashboard = () => {
         <Col xs={24} lg={12}>
           <Card title="Tỉ trọng doanh thu theo loại xe">
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 32 }}>
-              <div style={{ position: 'relative', width: '100%', maxWidth: 280 }}>
+              <div style={{ position: 'relative', width: '100%', maxWidth: 320 }}>
                 <ResponsiveContainer width="100%" height={280}>
                   <PieChart>
                     <Pie
@@ -212,7 +212,7 @@ const Dashboard = () => {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ percent }) => percent ? `${(percent * 100).toFixed(0)}%` : ''}
+                      label={({ percent }) => percent ? `${percent.toFixed(2)}%` : ''}
                       outerRadius={100}
                       innerRadius={60}
                       fill="#8884d8"
@@ -228,14 +228,14 @@ const Dashboard = () => {
                 </ResponsiveContainer>
                 <div style={{
                   position: 'absolute',
+                  zIndex: 1000,
                   top: '50%',
                   left: '50%',
                   transform: 'translate(-50%, -50%)',
                   textAlign: 'center',
                   pointerEvents: 'none'
                 }}>
-                  <p style={{ fontSize: 24, fontWeight: 'bold', margin: 0 }}>100%</p>
-                  <p style={{ fontSize: 12, color: '#999', marginTop: 4 }}>Tổng</p>
+                  <p style={{ fontSize: 24, fontWeight: 'bold', margin: 0 }}>Xe</p>
                 </div>
               </div>
               <div style={{ width: '100%' }}>

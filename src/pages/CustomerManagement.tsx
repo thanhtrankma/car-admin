@@ -1,88 +1,120 @@
-import { useState } from 'react';
-import { Car } from 'lucide-react';
-import { Input, Button, Card, Space, Row, Col, Modal, Form, message, Popconfirm } from 'antd';
-import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, MailOutlined, PhoneOutlined, EnvironmentOutlined } from '@ant-design/icons';
-
-interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-  carUsing?: string;
-  totalOrders: number;
-  totalSpent: number;
-  joinDate: string;
-}
+import { useCallback, useEffect, useState } from 'react';
+import { Input, Button, Card, Space, Row, Col, Modal, Form, message, Popconfirm, Spin, Pagination } from 'antd';
+import { SearchOutlined, EditOutlined, DeleteOutlined, MailOutlined, PhoneOutlined, EnvironmentOutlined } from '@ant-design/icons';
+import {
+  listCustomers,
+  createCustomer,
+  updateCustomer,
+  deleteCustomer,
+  getCustomerById,
+  type CustomerDto,
+} from '../services/customerService';
 
 const CustomerManagement = () => {
-  const [customers, setCustomers] = useState<Customer[]>([
-    { id: '1', name: 'Nguyễn Văn A', email: 'nguyenvana@email.com', phone: '0901234567', address: 'Hà Nội', carUsing: 'Honda Vision 2025', totalOrders: 3, totalSpent: 2500000000, joinDate: '2024-01-15' },
-    { id: '2', name: 'Trần Thị B', email: 'tranthib@email.com', phone: '0902345678', address: 'TP.HCM', carUsing: 'Honda SH Mode 2025', totalOrders: 2, totalSpent: 2400000000, joinDate: '2024-02-20' },
-    { id: '3', name: 'Lê Văn C', email: 'levanc@email.com', phone: '0903456789', address: 'Đà Nẵng', carUsing: 'Air Blade', totalOrders: 1, totalSpent: 950000000, joinDate: '2024-03-10' },
-    { id: '4', name: 'Phạm Thị D', email: 'phamthid@email.com', phone: '0904567890', address: 'Hải Phòng', totalOrders: 1, totalSpent: 750000000, joinDate: '2024-04-05' },
-    { id: '5', name: 'Hoàng Văn E', email: 'hoangvane@email.com', phone: '0905678901', address: 'Cần Thơ', carUsing: 'Wave Alpha 110', totalOrders: 2, totalSpent: 1760000000, joinDate: '2024-05-12' },
-  ]);
-
+  const [customers, setCustomers] = useState<CustomerDto[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(6);
+  const [total, setTotal] = useState(0);
   const [form] = Form.useForm();
 
-  const filteredCustomers = customers.filter(customer =>
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.phone.includes(searchTerm)
-  );
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedSearch(searchTerm), 500);
+    return () => clearTimeout(timeout);
+  }, [searchTerm]);
+
+  const fetchCustomers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await listCustomers({
+        search: debouncedSearch || undefined,
+        page,
+        limit,
+        sortBy: 'created_at',
+        sortOrder: 'desc',
+      });
+      setCustomers(response.data);
+      setTotal(response.pagination.total);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Không thể tải danh sách khách hàng';
+      message.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedSearch, page, limit]);
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [fetchCustomers]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN').format(price);
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '';
     const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN');
+    return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('vi-VN');
   };
 
-  const handleDelete = (id: string) => {
-    setCustomers(customers.filter(customer => customer.id !== id));
-    message.success('Xóa khách hàng thành công!');
-  };
-
-  const handleEdit = (customer: Customer) => {
-    setEditingId(customer.id);
-    form.setFieldsValue({
-      name: customer.name,
-      email: customer.email,
-      phone: customer.phone,
-      address: customer.address,
-      carUsing: customer.carUsing || '',
-    });
-    setIsModalOpen(true);
-  };
-
-  const handleSave = (values: { name: string; email: string; phone: string; address: string; carUsing?: string }) => {
-    if (editingId) {
-      setCustomers(customers.map(customer =>
-        customer.id === editingId
-          ? { ...customer, ...values }
-          : customer
-      ));
-      message.success('Cập nhật khách hàng thành công!');
-    } else {
-      const newCustomer: Customer = {
-        id: String(customers.length + 1),
-        ...values,
-        totalOrders: 0,
-        totalSpent: 0,
-        joinDate: new Date().toISOString().split('T')[0],
-      };
-      setCustomers([...customers, newCustomer]);
-      message.success('Thêm khách hàng thành công!');
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteCustomer(id);
+      message.success('Xóa khách hàng thành công!');
+      fetchCustomers();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Không thể xóa khách hàng';
+      message.error(errorMessage);
     }
-    setIsModalOpen(false);
-    setEditingId(null);
-    form.resetFields();
+  };
+
+  const handleEdit = async (id: string) => {
+    setModalLoading(true);
+    try {
+      const response = await getCustomerById(id);
+      const customer = response.data;
+      setEditingId(id);
+      form.setFieldsValue({
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        address: customer.address,
+      });
+      setIsModalOpen(true);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Không thể tải thông tin khách hàng';
+      message.error(errorMessage);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const handleSave = async (values: { name: string; email: string; phone: string; address: string }) => {
+    setSaving(true);
+    try {
+      if (editingId) {
+        await updateCustomer(editingId, values);
+        message.success('Cập nhật khách hàng thành công!');
+      } else {
+        await createCustomer(values);
+        message.success('Thêm khách hàng thành công!');
+      }
+      setIsModalOpen(false);
+      setEditingId(null);
+      form.resetFields();
+      fetchCustomers();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Không thể lưu khách hàng';
+      message.error(errorMessage);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -91,11 +123,18 @@ const CustomerManagement = () => {
     form.resetFields();
   };
 
-  const handleAdd = () => {
-    setEditingId(null);
-    form.resetFields();
-    setIsModalOpen(true);
+  // const handleAdd = () => {
+  //   setEditingId(null);
+  //   form.resetFields();
+  //   setIsModalOpen(true);
+  // };
+
+  const handlePageChange = (newPage: number, newLimit: number) => {
+    setPage(newPage);
+    setLimit(newLimit);
   };
+
+  const hasCustomers = customers.length > 0;
 
   return (
     <div>
@@ -111,14 +150,14 @@ const CustomerManagement = () => {
           <h1 style={{ fontSize: window.innerWidth < 576 ? 20 : 24, fontWeight: 'bold', marginBottom: 8 }}>Quản lý khách hàng</h1>
           <p style={{ color: '#666', fontSize: 14 }}>Quản lý thông tin khách hàng trong hệ thống</p>
         </div>
-        <Button
+        {/* <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={handleAdd}
           block={window.innerWidth < 768}
         >
           Thêm mới
-        </Button>
+        </Button> */}
       </div>
 
       <Card style={{ marginBottom: 24 }}>
@@ -131,80 +170,90 @@ const CustomerManagement = () => {
         />
       </Card>
 
-      <Row gutter={[16, 16]}>
-        {filteredCustomers.map((customer) => (
-          <Col xs={24} sm={12} lg={8} key={customer.id}>
-            <Card
-              hoverable
-              actions={[
-                <Button
-                  type="link"
-                  icon={<EditOutlined />}
-                  onClick={() => handleEdit(customer)}
-                />,
-                <Popconfirm
-                  title="Bạn có chắc chắn muốn xóa khách hàng này?"
-                  onConfirm={() => handleDelete(customer.id)}
-                  okText="Xóa"
-                  cancelText="Hủy"
-                >
-                  <Button type="link" danger icon={<DeleteOutlined />} />
-                </Popconfirm>,
-              ]}
-            >
-              <div>
-                <h3 style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 4 }}>{customer.name}</h3>
-                <p style={{ color: '#999', fontSize: 12, marginBottom: 16 }}>
-                  Thành viên từ {formatDate(customer.joinDate)}
-                </p>
+      <Spin spinning={loading}>
+        <Row gutter={[16, 16]}>
+          {customers.map((customer) => (
+            <Col xs={24} sm={12} lg={8} key={customer.id}>
+              <Card
+                hoverable
+                actions={[
+                  <Button
+                    type="link"
+                    icon={<EditOutlined />}
+                    onClick={() => handleEdit(customer.id)}
+                  />,
+                  <Popconfirm
+                    title="Bạn có chắc chắn muốn xóa khách hàng này?"
+                    onConfirm={() => handleDelete(customer.id)}
+                    okText="Xóa"
+                    cancelText="Hủy"
+                  >
+                    <Button type="link" danger icon={<DeleteOutlined />} />
+                  </Popconfirm>,
+                ]}
+              >
+                <div>
+                  <h3 style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 4 }}>{customer.name}</h3>
+                  <p style={{ color: '#999', fontSize: 12, marginBottom: 16 }}>
+                    Thành viên từ {formatDate(customer.created_at) || '—'}
+                  </p>
 
-                <Space direction="vertical" size="small" style={{ width: '100%', marginBottom: 16 }}>
-                  <div>
-                    <MailOutlined style={{ marginRight: 8, color: '#666' }} />
-                    <span style={{ fontSize: 14 }}>{customer.email}</span>
-                  </div>
-                  <div>
-                    <PhoneOutlined style={{ marginRight: 8, color: '#666' }} />
-                    <span style={{ fontSize: 14 }}>{customer.phone}</span>
-                  </div>
-                  <div>
-                    <EnvironmentOutlined style={{ marginRight: 8, color: '#666' }} />
-                    <span style={{ fontSize: 14 }}>{customer.address}</span>
-                  </div>
-                  {customer.carUsing && (
+                  <Space direction="vertical" size="small" style={{ width: '100%', marginBottom: 16 }}>
                     <div>
-                      <Car style={{ width: 14, height: 14, marginRight: 8, color: '#666' }} />
-                      <span style={{ fontSize: 14 }}>{customer.carUsing}</span>
+                      <MailOutlined style={{ marginRight: 8, color: '#666' }} />
+                      <span style={{ fontSize: 14 }}>{customer.email}</span>
                     </div>
-                  )}
-                </Space>
+                    <div>
+                      <PhoneOutlined style={{ marginRight: 8, color: '#666' }} />
+                      <span style={{ fontSize: 14 }}>{customer.phone}</span>
+                    </div>
+                    <div>
+                      <EnvironmentOutlined style={{ marginRight: 8, color: '#666' }} />
+                      <span style={{ fontSize: 14 }}>{customer.address}</span>
+                    </div>
+                  </Space>
 
-                <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 16, marginTop: 16 }}>
-                  <Row gutter={16}>
-                    <Col span={12}>
-                      <p style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>Tổng đơn hàng</p>
-                      <p style={{ fontSize: 18, fontWeight: 'bold', margin: 0 }}>{customer.totalOrders}</p>
-                    </Col>
-                    <Col span={12}>
-                      <p style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>Tổng chi tiêu</p>
-                      <p style={{ fontSize: 18, fontWeight: 'bold', color: '#1890ff', margin: 0 }}>
-                        {formatPrice(customer.totalSpent)} VNĐ
-                      </p>
-                    </Col>
-                  </Row>
+                  <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 16, marginTop: 16 }}>
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <p style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>Tổng đơn hàng</p>
+                        <p style={{ fontSize: 18, fontWeight: 'bold', margin: 0 }}>{customer.totalOrders ?? 0}</p>
+                      </Col>
+                      <Col span={12}>
+                        <p style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>Tổng chi tiêu</p>
+                        <p style={{ fontSize: 18, fontWeight: 'bold', color: '#1890ff', margin: 0 }}>
+                          {formatPrice(customer.totalSpent ?? 0)} VNĐ
+                        </p>
+                      </Col>
+                    </Row>
+                  </div>
                 </div>
-              </div>
-            </Card>
-          </Col>
-        ))}
-      </Row>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      </Spin>
 
-      {filteredCustomers.length === 0 && (
+      {!loading && !hasCustomers && (
         <Card>
           <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
             Không tìm thấy khách hàng nào
           </div>
         </Card>
+      )}
+
+      {hasCustomers && (
+        <div style={{ marginTop: 24, textAlign: 'right' }}>
+          <Pagination
+            current={page}
+            pageSize={limit}
+            total={total}
+            onChange={(newPage, newSize) => handlePageChange(newPage, newSize || limit)}
+            showSizeChanger
+            showTotal={(value) => `Tổng ${value} khách hàng`}
+            responsive
+          />
+        </div>
       )}
 
       <Modal
@@ -214,11 +263,12 @@ const CustomerManagement = () => {
         footer={null}
         width={window.innerWidth < 768 ? '90%' : 600}
       >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSave}
-        >
+        <Spin spinning={modalLoading}>
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleSave}
+          >
           <Form.Item
             label="Tên khách hàng"
             name="name"
@@ -254,22 +304,16 @@ const CustomerManagement = () => {
             <Input placeholder="Nhập địa chỉ" size="large" />
           </Form.Item>
 
-          <Form.Item
-            label="Xe đang dùng"
-            name="carUsing"
-          >
-            <Input placeholder="Nhập tên xe đang dùng (nếu có)" size="large" />
-          </Form.Item>
-
           <Form.Item style={{ marginTop: 24, marginBottom: 0 }}>
             <Space style={{ float: 'right' }}>
               <Button onClick={handleCancel}>Hủy</Button>
-              <Button type="primary" htmlType="submit">
+              <Button type="primary" htmlType="submit" loading={saving}>
                 Lưu
               </Button>
             </Space>
           </Form.Item>
-        </Form>
+          </Form>
+        </Spin>
       </Modal>
     </div>
   );

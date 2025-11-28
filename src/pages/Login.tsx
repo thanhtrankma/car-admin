@@ -1,6 +1,8 @@
 
-import { Form, Input, Button, Card, Image } from 'antd';
+import { useState } from 'react';
+import { Form, Input, Button, Card, Image, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
+import { login as loginService } from '../services/authService';
 
 interface LoginProps {
   onLogin: (role: 'manager' | 'staff') => void;
@@ -8,10 +10,31 @@ interface LoginProps {
 
 const Login = ({ onLogin }: LoginProps) => {
   const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (values: Record<string, string>) => {
-    if (values.username && values.password) {
-      onLogin('staff');
+  const handleSubmit = async (values: Record<string, string>) => {
+    if (!values.username || !values.password) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await loginService({
+        username: values.username,
+        password: values.password,
+      });
+
+      localStorage.setItem('accessToken', response.accessToken);
+      localStorage.setItem('currentUser', JSON.stringify(response.user));
+
+      message.success(response.message || 'Đăng nhập thành công');
+      form.resetFields();
+      onLogin(response.user.role === 'ADMIN' ? 'manager' : 'staff');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Đăng nhập thất bại';
+      message.error(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -72,6 +95,7 @@ const Login = ({ onLogin }: LoginProps) => {
               htmlType="submit"
               block
               style={{ height: 48, fontSize: 16 }}
+              loading={loading}
             >
               Đăng nhập
             </Button>

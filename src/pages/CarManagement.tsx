@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, Input, Button, Card, Space, Select, Tag, Pagination, message, Popconfirm, Row, Col } from 'antd';
+import { Table, Input, Button, Card, Space, Select, Tag, Pagination, message, Popconfirm, Row, Col, Image } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { SearchOutlined, PlusOutlined, DownloadOutlined, InfoCircleOutlined, DeleteOutlined } from '@ant-design/icons';
+import { SearchOutlined, PlusOutlined, DownloadOutlined, InfoCircleOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
+import { listProducts, deleteProduct, type ProductDto } from '../services/productService';
 
 const { Option } = Select;
 
 interface Car {
+  id: string;
+  sku?: string;
   code: string;
   name: string;
   type: string;
@@ -16,49 +19,158 @@ interface Car {
   sellingPrice: number;
   status: string;
   quantity: number;
+  vehicleType?: number;
+  warehouseStatus?: number;
+  images?: string[];
 }
+
+const VEHICLE_TYPE_LABELS: Record<number, string> = {
+  1: 'Xe tay ga',
+  2: 'Xe số',
+  3: 'Xe côn tay',
+};
+
+const WAREHOUSE_STATUS_META: Record<number, { label: string; color: string }> = {
+  1: { label: 'Còn hàng', color: 'green' },
+  2: { label: 'Hết hàng', color: 'red' },
+  3: { label: 'Sắp về', color: 'blue' },
+  4: { label: 'Đang bảo hành', color: 'orange' },
+};
+
+const formatDateTime = (value?: string) => {
+  if (!value) return '';
+  try {
+    return new Date(value).toLocaleString('vi-VN', {
+      hour12: false,
+    });
+  } catch {
+    return value;
+  }
+};
+
+const formatImageUrl = (url?: string) => {
+  if (!url) return '';
+  if (/^https?:\/\//i.test(url)) return url;
+  return `http://${url}`;
+};
+
+const mapProductToCar = (product: ProductDto): Car => ({
+  id: product.id,
+  sku: product.sku,
+  code: product.code,
+  name: product.name,
+  type: VEHICLE_TYPE_LABELS[product.vehicleType] ?? `Loại ${product.vehicleType}`,
+  version: product.version,
+  createdAt: formatDateTime(product.created_at),
+  costPrice: product.cost,
+  sellingPrice: product.price,
+  status: WAREHOUSE_STATUS_META[product.warehouseStatus]?.label ?? `Trạng thái ${product.warehouseStatus}`,
+  quantity: product.quantity,
+  vehicleType: product.vehicleType,
+  warehouseStatus: product.warehouseStatus,
+  images: product.images,
+});
 
 const CarManagement = () => {
   const navigate = useNavigate();
-  const [cars, setCars] = useState<Car[]>([
-    { code: 'H001', name: 'Wave Alpha', type: 'Xe số', version: '2023', createdAt: '20/10/2025 14:00', costPrice: 18240000, sellingPrice: 19380000, status: 'Còn hàng', quantity: 10 },
-    { code: 'H002', name: 'Vision', type: 'Xe tay ga', version: '2024', createdAt: '20/10/2025 14:01', costPrice: 30960000, sellingPrice: 32490000, status: 'Còn hàng', quantity: 10 },
-    { code: 'H003', name: 'SH Mode', type: 'Xe tay ga', version: '2023 ABS', createdAt: '20/10/2025 14:02', costPrice: 55420000, sellingPrice: 58350000, status: 'Còn hàng', quantity: 7 },
-    { code: 'H004', name: 'Air Blade', type: 'Xe tay ga', version: '2024 160cc', createdAt: '20/10/2025 14:03', costPrice: 42780000, sellingPrice: 45190000, status: 'Còn hàng', quantity: 8 },
-    { code: 'H005', name: 'Winner X', type: 'Xe côn tay', version: '2023', createdAt: '20/10/2025 14:03', costPrice: 45360000, sellingPrice: 48210000, status: 'Còn hàng', quantity: 15 },
-    { code: 'H006', name: 'Lead', type: 'Xe tay ga', version: '2024 Smartkey', createdAt: '20/10/2025 14:03', costPrice: 38540000, sellingPrice: 40890000, status: 'Còn hàng', quantity: 12 },
-    { code: 'H007', name: 'SH 150i', type: 'Xe tay ga', version: '2024 CBS', createdAt: '20/10/2025 14:02', costPrice: 85120000, sellingPrice: 89480000, status: 'Còn hàng', quantity: 10 },
-  ]);
-
+  const [cars, setCars] = useState<Car[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [totalItems, setTotalItems] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
-  const [typeFilter, setTypeFilter] = useState<string>('');
-  const [nameFilter, setNameFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<number | undefined>(undefined);
+  const [typeFilter, setTypeFilter] = useState<number | undefined>(undefined);
+  const [nameFilter, setNameFilter] = useState<string | undefined>(undefined);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-
-  const filteredCars = cars.filter(car =>
-    (car.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     car.name.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    (statusFilter === '' || car.status === statusFilter) &&
-    (typeFilter === '' || car.type === typeFilter) &&
-    (nameFilter === '' || car.name === nameFilter)
-  );
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN').format(price);
   };
 
-  const handleDelete = (code: string) => {
-    setCars(cars.filter(car => car.code !== code));
-    message.success('Xóa xe thành công!');
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteProduct(id);
+      message.success('Xóa xe thành công!');
+      await fetchCars();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Xóa xe thất bại';
+      message.error(errorMessage);
+    }
   };
 
-  const uniqueStatuses = Array.from(new Set(cars.map(car => car.status)));
-  const uniqueTypes = Array.from(new Set(cars.map(car => car.type)));
-  const uniqueNames = Array.from(new Set(cars.map(car => car.name)));
+  const fetchCars = useCallback(async () => {
+    setLoading(true);
+    try {
+      const searchValue = (nameFilter ?? searchTerm).trim();
+      const response = await listProducts({
+        search: searchValue || undefined,
+        warehouseStatus: statusFilter,
+        vehicleType: typeFilter,
+        page: currentPage,
+        limit: pageSize,
+        sortBy: 'created_at',
+        sortOrder: 'desc',
+      });
+
+      setCars(response.data.map(mapProductToCar));
+      setTotalItems(response.pagination.total);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Không thể tải danh sách xe';
+      message.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, pageSize, searchTerm, nameFilter, statusFilter, typeFilter]);
+
+  useEffect(() => {
+    fetchCars();
+  }, [fetchCars]);
+
+  const uniqueStatuses = useMemo(() => {
+    const statusMap = new Map<number, string>();
+    cars.forEach(car => {
+      if (typeof car.warehouseStatus === 'number' && !statusMap.has(car.warehouseStatus)) {
+        statusMap.set(car.warehouseStatus, car.status);
+      }
+    });
+    return Array.from(statusMap.entries());
+  }, [cars]);
+
+  const uniqueTypes = useMemo(() => {
+    const typeMap = new Map<number, string>();
+    cars.forEach(car => {
+      if (typeof car.vehicleType === 'number' && !typeMap.has(car.vehicleType)) {
+        typeMap.set(car.vehicleType, car.type);
+      }
+    });
+    return Array.from(typeMap.entries());
+  }, [cars]);
+
+  const uniqueNames = useMemo(() => Array.from(new Set(cars.map(car => car.name))), [cars]);
 
   const columns: ColumnsType<Car> = [
+    {
+      title: 'Ảnh',
+      dataIndex: 'images',
+      key: 'images',
+      width: 80,
+      render: (images: string[] | undefined, record) => {
+        const firstImage = formatImageUrl(images?.[0]);
+        if (!firstImage) {
+          return <div style={{ width: 48, height: 48, background: '#f5f5f5', borderRadius: 8 }} />;
+        }
+        return (
+          <Image
+            src={firstImage}
+            alt={record.name}
+            width={48}
+            height={48}
+            style={{ objectFit: 'cover', borderRadius: 8 }}
+            preview={false}
+          />
+        );
+      },
+    },
     {
       title: 'Mã xe',
       dataIndex: 'code',
@@ -100,11 +212,14 @@ const CarManagement = () => {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => (
-        <Tag color={status === 'Còn hàng' ? 'green' : 'red'}>
-          {status}
-        </Tag>
-      ),
+      render: (status, record) => {
+        const meta = record.warehouseStatus ? WAREHOUSE_STATUS_META[record.warehouseStatus] : undefined;
+        return (
+          <Tag color={meta?.color ?? 'default'}>
+            {status}
+          </Tag>
+        );
+      },
     },
     {
       title: 'Số lượng',
@@ -124,9 +239,15 @@ const CarManagement = () => {
             onClick={() => navigate(`/cars/${record.code}`)}
             title="Xem chi tiết"
           />
+          <Button
+            type="link"
+            icon={<EditOutlined />}
+            onClick={() => navigate(`/cars/${record.code}/edit`)}
+            title="Chỉnh sửa"
+          />
           <Popconfirm
             title="Bạn có chắc chắn muốn xóa xe này?"
-            onConfirm={() => handleDelete(record.code)}
+            onConfirm={() => handleDelete(record.id)}
             okText="Xóa"
             cancelText="Hủy"
           >
@@ -136,8 +257,6 @@ const CarManagement = () => {
       ),
     },
   ];
-
-  const paginatedCars = filteredCars.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div>
@@ -169,7 +288,10 @@ const CarManagement = () => {
           placeholder="Tìm kiếm theo mã, tên xe..."
           prefix={<SearchOutlined />}
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1);
+          }}
           size="large"
         />
       </Card>
@@ -178,41 +300,45 @@ const CarManagement = () => {
         <Space wrap>
           <span style={{ fontWeight: 500 }}>Bộ lọc nhanh:</span>
           <Button
-            type={typeFilter === '' && statusFilter === '' && nameFilter === '' ? 'primary' : 'default'}
+            type={!typeFilter && !statusFilter && !nameFilter ? 'primary' : 'default'}
             onClick={() => {
-              setTypeFilter('');
-              setStatusFilter('');
-              setNameFilter('');
+              setTypeFilter(undefined);
+              setStatusFilter(undefined);
+              setNameFilter(undefined);
+              setCurrentPage(1);
             }}
           >
             Tất cả
           </Button>
           <Button
-            type={typeFilter === 'Xe số' ? 'primary' : 'default'}
+            type={typeFilter === 2 ? 'primary' : 'default'}
             onClick={() => {
-              setTypeFilter('Xe số');
-              setStatusFilter('');
-              setNameFilter('');
+              setTypeFilter(2);
+              setStatusFilter(undefined);
+              setNameFilter(undefined);
+              setCurrentPage(1);
             }}
           >
             Xe số
           </Button>
           <Button
-            type={typeFilter === 'Xe tay ga' ? 'primary' : 'default'}
+            type={typeFilter === 1 ? 'primary' : 'default'}
             onClick={() => {
-              setTypeFilter('Xe tay ga');
-              setStatusFilter('');
-              setNameFilter('');
+              setTypeFilter(1);
+              setStatusFilter(undefined);
+              setNameFilter(undefined);
+              setCurrentPage(1);
             }}
           >
             Xe tay ga
           </Button>
           <Button
-            type={typeFilter === 'Xe côn tay' ? 'primary' : 'default'}
+            type={typeFilter === 3 ? 'primary' : 'default'}
             onClick={() => {
-              setTypeFilter('Xe côn tay');
-              setStatusFilter('');
-              setNameFilter('');
+              setTypeFilter(3);
+              setStatusFilter(undefined);
+              setNameFilter(undefined);
+              setCurrentPage(1);
             }}
           >
             Xe côn tay
@@ -226,29 +352,38 @@ const CarManagement = () => {
           <Select
             placeholder="Trạng thái"
             value={statusFilter}
-            onChange={setStatusFilter}
+            onChange={(value) => {
+              setStatusFilter(value);
+              setCurrentPage(1);
+            }}
             allowClear
             style={{ width: window.innerWidth < 576 ? '100%' : 150 }}
           >
-            {uniqueStatuses.map((status) => (
-              <Option key={status} value={status}>{status}</Option>
+            {uniqueStatuses.map(([value, label]) => (
+              <Option key={value} value={value}>{label}</Option>
             ))}
           </Select>
           <Select
             placeholder="Loại xe"
             value={typeFilter}
-            onChange={setTypeFilter}
+            onChange={(value) => {
+              setTypeFilter(value);
+              setCurrentPage(1);
+            }}
             allowClear
             style={{ width: window.innerWidth < 576 ? '100%' : 150 }}
           >
-            {uniqueTypes.map((type) => (
-              <Option key={type} value={type}>{type}</Option>
+            {uniqueTypes.map(([value, label]) => (
+              <Option key={value} value={value}>{label}</Option>
             ))}
           </Select>
           <Select
             placeholder="Tên xe"
             value={nameFilter}
-            onChange={setNameFilter}
+            onChange={(value) => {
+              setNameFilter(value);
+              setCurrentPage(1);
+            }}
             allowClear
             style={{ width: window.innerWidth < 576 ? '100%' : 200 }}
           >
@@ -263,20 +398,21 @@ const CarManagement = () => {
         <div style={{ overflowX: 'auto' }}>
           <Table
             columns={columns}
-            dataSource={paginatedCars}
-            rowKey="code"
+            dataSource={cars}
+            rowKey={(record) => record.id || record.code}
             pagination={false}
             scroll={{ x: 1200 }}
+            loading={loading}
           />
         </div>
         <div style={{ marginTop: 16, textAlign: 'right' }}>
           <Pagination
             current={currentPage}
             pageSize={pageSize}
-            total={filteredCars.length}
+            total={totalItems}
             onChange={(page, size) => {
               setCurrentPage(page);
-              setPageSize(size);
+              setPageSize(size || pageSize);
             }}
             showSizeChanger
             showTotal={(total) => `Tổng ${total} xe`}
