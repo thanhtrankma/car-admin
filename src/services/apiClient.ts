@@ -6,7 +6,7 @@ import axios, {
 
 const API_BASE_URL =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
-  'http://192.168.1.18:9004/honda';
+  'http://171.244.43.84:9004/honda';
 
 declare module 'axios' {
   interface AxiosRequestConfig {
