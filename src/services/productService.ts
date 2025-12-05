@@ -68,11 +68,12 @@ export interface ProductPayload {
   chassisNumber?: string;
   engineNumber?: string;
   receiptDate?: string;
-  cost: number;
+  cost?: number;
   price: number;
-  quantity: number;
+  quantity?: number;
   warehouseStatus: number;
   images?: string[];
+  wareHouseId?: string;
 }
 
 export interface ProductTypeDto {
@@ -142,4 +143,86 @@ export const listProductTypes = (page = 1, limit = 100) =>
     params: { page, limit },
   });
 
+export interface WarehouseDto {
+  id: string;
+  publicCode: string;
+  receiptDate: string;
+  quantity: number;
+  createdBy: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  deletedBy: string | null;
+}
+
+export interface ListWarehousesParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface ListWarehousesResponse {
+  data: WarehouseDto[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export const listWarehouses = (params?: ListWarehousesParams) =>
+  apiRequest<ListWarehousesResponse>('/warehouses', { params });
+
+export interface ProductRemainStateResponse {
+  success: boolean;
+  data: {
+    totalRemain: number;
+  };
+}
+
+export interface ProductRemainDto {
+  id: string;
+  deleted_at: string | null;
+  deletedBy: string | null;
+  wareHouseId: string;
+  productTypeId: string;
+  publicCode: string;
+  code: string;
+  name: string;
+  cost: number;
+  totalCost: number;
+  quantity: number;
+  remain: number;
+  totalProductCreated: number;
+  types: number[];
+  abbreviation: string;
+  createdBy: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ListProductRemainParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface ListProductRemainResponse {
+  data: ProductRemainDto[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export const getProductRemainState = () =>
+  apiRequest<ProductRemainStateResponse>('/product-remain/state');
+
+export const listProductRemain = (params?: ListProductRemainParams) =>
+  apiRequest<ListProductRemainResponse>('/product-remain', { params });
 

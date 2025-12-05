@@ -1,58 +1,126 @@
-import { useState } from 'react';
-import { Button, Card, Select, Table, Space, Modal, Form, InputNumber, DatePicker, message } from 'antd';
+import { useState, useEffect } from 'react';
+import { Button, Card, Table, Space, Modal, Form, InputNumber, DatePicker, message, Tabs } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, InboxOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { listProductTypes, listWarehouses, type ProductTypeDto, type WarehouseDto } from '../services/productService';
+import { apiRequest, ApiError } from '../services/apiClient';
 
-const { Option } = Select;
-
-interface StockInItem {
-  id: string;
-  carCode: string;
-  carName: string;
+interface WarehouseItem {
+  productTypeId: string;
   quantity: number;
-  unitPrice: number;
-  total: number;
-  date: string;
+  cost: number;
+}
+
+interface WarehousePayload {
+  receiptDate: string;
+  items: WarehouseItem[];
 }
 
 const StockIn = () => {
-  const [stockInList, setStockInList] = useState<StockInItem[]>([
-    { id: '1', carCode: 'H001', carName: 'Wave Alpha', quantity: 10, unitPrice: 18240000, total: 182400000, date: '2024-11-20' },
-    { id: '2', carCode: 'H002', carName: 'Vision', quantity: 10, unitPrice: 30960000, total: 309600000, date: '2024-11-21' },
-  ]);
-
+  const [stockInList, setStockInList] = useState<WarehouseDto[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form] = Form.useForm();
+  const [productTypes, setProductTypes] = useState<ProductTypeDto[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>('');
+  const [tableLoading, setTableLoading] = useState(false);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+  });
 
-  const availableCars = [
-    { code: 'H001', name: 'Wave Alpha' },
-    { code: 'H002', name: 'Vision' },
-    { code: 'H003', name: 'SH Mode' },
-    { code: 'H004', name: 'Air Blade' },
-    { code: 'H005', name: 'Winner X' },
-    { code: 'H006', name: 'Lead' },
-    { code: 'H007', name: 'SH 150i' },
-  ];
+  const fetchWarehouses = async (page = 1, limit = 10) => {
+    try {
+      setTableLoading(true);
+      const response = await listWarehouses({
+        page,
+        limit,
+        sortBy: 'created_at',
+        sortOrder: 'desc',
+      });
+      setStockInList(response.data);
+      setPagination({
+        current: response.pagination.page,
+        pageSize: response.pagination.limit,
+        total: response.pagination.total,
+      });
+    } catch {
+      message.error('Không thể tải danh sách phiếu nhập kho');
+    } finally {
+      setTableLoading(false);
+    }
+  };
 
-  const handleSave = (values: { carCode: string; quantity: number; unitPrice: number; date: dayjs.Dayjs }) => {
-    const car = availableCars.find(c => c.code === values.carCode);
-    if (!car) return;
+  useEffect(() => {
+    fetchWarehouses();
+  }, []);
 
-    const newItem: StockInItem = {
-      id: `ST${Date.now()}`,
-      carCode: values.carCode,
-      carName: car.name,
-      quantity: values.quantity,
-      unitPrice: values.unitPrice,
-      total: values.quantity * values.unitPrice,
-      date: values.date.format('YYYY-MM-DD'),
+  useEffect(() => {
+    const fetchProductTypes = async () => {
+      try {
+        setLoading(true);
+        const response = await listProductTypes(1, 100);
+        setProductTypes(response.data);
+        if (response.data.length > 0) {
+          setActiveTab(response.data[0].id);
+        }
+      } catch {
+        message.error('Không thể tải danh sách loại sản phẩm');
+      } finally {
+        setLoading(false);
+      }
     };
 
-    setStockInList([newItem, ...stockInList]);
-    setIsModalOpen(false);
-    form.resetFields();
-    message.success('Nhập kho thành công!');
+    if (isModalOpen) {
+      fetchProductTypes();
+    }
+  }, [isModalOpen]);
+
+  const handleSave = async (values: { receiptDate: dayjs.Dayjs; [key: string]: unknown }) => {
+    try {
+      const items: WarehouseItem[] = productTypes
+        .map((type) => {
+          const quantity = Number(values[`quantity_${type.id}`]) || 0;
+          const cost = Number(values[`cost_${type.id}`]) || 0;
+          if (quantity > 0 && cost > 0) {
+            return {
+              productTypeId: type.id,
+              quantity,
+              cost,
+            };
+          }
+          return null;
+        })
+        .filter((item): item is WarehouseItem => item !== null);
+
+      if (items.length === 0) {
+        message.warning('Vui lòng nhập ít nhất một sản phẩm');
+        return;
+      }
+
+      const payload: WarehousePayload = {
+        receiptDate: values.receiptDate.format('YYYY-MM-DD'),
+        items,
+      };
+
+      await apiRequest<{ message: string }>('/warehouses', {
+        method: 'POST',
+        data: payload,
+      });
+
+      message.success('Tạo phiếu nhập kho thành công');
+      setIsModalOpen(false);
+      form.resetFields();
+      if (productTypes.length > 0) {
+        setActiveTab(productTypes[0].id);
+      }
+      fetchWarehouses(pagination.current, pagination.pageSize);
+    } catch (error) {
+      const errorMessage = error instanceof ApiError ? error.message : 'Có lỗi xảy ra khi tạo phiếu nhập kho';
+      message.error(errorMessage);
+    }
   };
 
   const formatPrice = (price: number) => {
@@ -63,21 +131,21 @@ const StockIn = () => {
     return new Date(dateString).toLocaleDateString('vi-VN');
   };
 
-  const columns: ColumnsType<StockInItem> = [
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleString('vi-VN');
+  };
+
+  const columns: ColumnsType<WarehouseDto> = [
     {
       title: 'Mã phiếu',
-      dataIndex: 'id',
-      key: 'id',
+      dataIndex: 'publicCode',
+      key: 'publicCode',
     },
     {
-      title: 'Mã xe',
-      dataIndex: 'carCode',
-      key: 'carCode',
-    },
-    {
-      title: 'Tên xe',
-      dataIndex: 'carName',
-      key: 'carName',
+      title: 'Ngày nhập',
+      dataIndex: 'receiptDate',
+      key: 'receiptDate',
+      render: (date) => formatDate(date),
     },
     {
       title: 'Số lượng',
@@ -85,22 +153,10 @@ const StockIn = () => {
       key: 'quantity',
     },
     {
-      title: 'Giá nhập',
-      dataIndex: 'unitPrice',
-      key: 'unitPrice',
-      render: (price) => formatPrice(price) + ' VNĐ',
-    },
-    {
-      title: 'Thành tiền',
-      dataIndex: 'total',
-      key: 'total',
-      render: (total) => <strong>{formatPrice(total)} VNĐ</strong>,
-    },
-    {
-      title: 'Ngày nhập',
-      dataIndex: 'date',
-      key: 'date',
-      render: (date) => formatDate(date),
+      title: 'Ngày tạo',
+      dataIndex: 'created_at',
+      key: 'created_at',
+      render: (date) => formatDateTime(date),
     },
   ];
 
@@ -134,74 +190,107 @@ const StockIn = () => {
         onCancel={() => {
           setIsModalOpen(false);
           form.resetFields();
+          if (productTypes.length > 0) {
+            setActiveTab(productTypes[0].id);
+          }
         }}
         footer={null}
-        width={window.innerWidth < 768 ? '95%' : 700}
+        width={window.innerWidth < 768 ? '95%' : 800}
       >
         <Form
           form={form}
           layout="vertical"
           onFinish={handleSave}
           initialValues={{
-            date: dayjs(),
-            quantity: 1,
+            receiptDate: dayjs(),
           }}
         >
           <Form.Item
-            label="Chọn xe"
-            name="carCode"
-            rules={[{ required: true, message: 'Vui lòng chọn xe' }]}
-          >
-            <Select placeholder="Chọn xe" size="large">
-              {availableCars.map(car => (
-                <Option key={car.code} value={car.code}>
-                  {car.name} ({car.code})
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Form.Item
             label="Ngày nhập"
-            name="date"
+            name="receiptDate"
             rules={[{ required: true, message: 'Vui lòng chọn ngày nhập' }]}
           >
-            <DatePicker style={{ width: '100%' }} size="large" />
+            <DatePicker style={{ width: '100%' }} size="large" format="DD/MM/YYYY" />
           </Form.Item>
 
-          <Form.Item
-            label="Số lượng nhập"
-            name="quantity"
-            rules={[{ required: true, message: 'Vui lòng nhập số lượng' }]}
-          >
-            <InputNumber<number> min={1} style={{ width: '100%' }} size="large" />
-          </Form.Item>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: 40 }}>Đang tải...</div>
+          ) : productTypes.length > 0 ? (
+            <Tabs
+              activeKey={activeTab}
+              onChange={setActiveTab}
+              items={productTypes.map((type) => ({
+                key: type.id,
+                label: type.name,
+                children: (
+                  <div style={{ padding: '16px 0' }}>
+                    <Form.Item
+                      label="Số lượng nhập"
+                      name={`quantity_${type.id}`}
+                      rules={[{ required: false }]}
+                    >
+                      <InputNumber<number>
+                        min={0}
+                        style={{ width: '100%' }}
+                        size="large"
+                        placeholder="Nhập số lượng"
+                      />
+                    </Form.Item>
 
-          <Form.Item
-            label="Giá nhập (VNĐ)"
-            name="unitPrice"
-            rules={[{ required: true, message: 'Vui lòng nhập giá nhập' }]}
-          >
-            <InputNumber<number>
-              min={0}
-              formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={(value) => Number((value || '0').replace(/\$\s?|(,*)/g, '')) || 0}
-              style={{ width: '100%' }}
-              size="large"
+                    <Form.Item
+                      label="Giá nhập (VNĐ)"
+                      name={`cost_${type.id}`}
+                      rules={[{ required: false }]}
+                    >
+                      <InputNumber<number>
+                        min={0}
+                        formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                        parser={(value) => Number((value || '0').replace(/\$\s?|(,*)/g, '')) || 0}
+                        style={{ width: '100%' }}
+                        size="large"
+                        placeholder="Nhập giá nhập"
+                      />
+                    </Form.Item>
+
+                    <Form.Item shouldUpdate>
+                      {({ getFieldValue }) => {
+                        const quantity = getFieldValue(`quantity_${type.id}`) || 0;
+                        const cost = getFieldValue(`cost_${type.id}`) || 0;
+                        const total = quantity * cost;
+                        return total > 0 ? (
+                          <Card style={{ background: '#e6f7ff', marginTop: 16 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontWeight: 500 }}>Thành tiền:</span>
+                              <span style={{ fontSize: 18, fontWeight: 'bold', color: '#1890ff' }}>
+                                {formatPrice(total)} VNĐ
+                              </span>
+                            </div>
+                          </Card>
+                        ) : null;
+                      }}
+                    </Form.Item>
+                  </div>
+                ),
+              }))}
             />
-          </Form.Item>
+          ) : (
+            <div style={{ textAlign: 'center', padding: 40 }}>Không có loại sản phẩm nào</div>
+          )}
 
           <Form.Item shouldUpdate>
             {({ getFieldValue }) => {
-              const quantity = getFieldValue('quantity') || 0;
-              const unitPrice = getFieldValue('unitPrice') || 0;
-              const total = quantity * unitPrice;
-              return total > 0 ? (
-                <Card style={{ background: '#e6f7ff', marginBottom: 16 }}>
+              let totalAmount = 0;
+              productTypes.forEach((type) => {
+                const quantity = getFieldValue(`quantity_${type.id}`) || 0;
+                const cost = getFieldValue(`cost_${type.id}`) || 0;
+                totalAmount += quantity * cost;
+              });
+              return totalAmount > 0 ? (
+                <Card style={{ background: '#f0f9ff', marginTop: 16, marginBottom: 16 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 500 }}>Tổng tiền:</span>
+                    <span style={{ fontWeight: 500, fontSize: 16 }}>Tổng tiền:</span>
                     <span style={{ fontSize: 24, fontWeight: 'bold', color: '#1890ff' }}>
-                      {formatPrice(total)} VNĐ
+                      {formatPrice(totalAmount)} VNĐ
                     </span>
                   </div>
                 </Card>
@@ -214,10 +303,13 @@ const StockIn = () => {
               <Button onClick={() => {
                 setIsModalOpen(false);
                 form.resetFields();
+                if (productTypes.length > 0) {
+                  setActiveTab(productTypes[0].id);
+                }
               }}>
                 Hủy
               </Button>
-              <Button type="primary" htmlType="submit">
+              <Button type="primary" htmlType="submit" loading={loading}>
                 Lưu phiếu nhập
               </Button>
             </Space>
@@ -235,7 +327,21 @@ const StockIn = () => {
             columns={columns}
             dataSource={stockInList}
             rowKey="id"
+            loading={tableLoading}
             scroll={{ x: 'max-content' }}
+            pagination={{
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              total: pagination.total,
+              showSizeChanger: true,
+              showTotal: (total) => `Tổng ${total} phiếu nhập kho`,
+              onChange: (page, pageSize) => {
+                fetchWarehouses(page, pageSize);
+              },
+              onShowSizeChange: (current, size) => {
+                fetchWarehouses(current, size);
+              },
+            }}
             locale={{
               emptyText: 'Chưa có phiếu nhập kho nào. Hãy tạo phiếu nhập kho mới!',
             }}

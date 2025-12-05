@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, Input, Button, Card, Space, Select, Tag, Pagination, message, Popconfirm, Row, Col, Image } from 'antd';
+import { Table, Input, Button, Card, Space, Select, Tag, Pagination, message, Popconfirm, Row, Col, Image, Alert } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { SearchOutlined, PlusOutlined, DownloadOutlined, InfoCircleOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { listProducts, deleteProduct, type ProductDto } from '../services/productService';
+import { SearchOutlined, InfoCircleOutlined, DeleteOutlined, EditOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { listProducts, deleteProduct, type ProductDto, getProductRemainState, listProductRemain } from '../services/productService';
+import PendingCarUpdateModal from '../components/PendingCarUpdateModal';
 
 const { Option } = Select;
 
@@ -82,6 +83,10 @@ const CarManagement = () => {
   const [nameFilter, setNameFilter] = useState<string | undefined>(undefined);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [totalRemain, setTotalRemain] = useState(0);
+  const [pendingList, setPendingList] = useState<Array<{ name: string; remain: number }>>([]);
+  const [pendingModalOpen, setPendingModalOpen] = useState(false);
+  const [loadingRemain, setLoadingRemain] = useState(false);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN').format(price);
@@ -125,6 +130,48 @@ const CarManagement = () => {
   useEffect(() => {
     fetchCars();
   }, [fetchCars]);
+
+  const fetchRemainState = useCallback(async () => {
+    setLoadingRemain(true);
+    try {
+      const response = await getProductRemainState();
+      setTotalRemain(response.data.totalRemain);
+      
+      if (response.data.totalRemain > 0) {
+        const remainList = await listProductRemain({
+          page: 1,
+          limit: 100,
+          sortBy: 'created_at',
+          sortOrder: 'desc',
+        });
+        
+        // Group by name and sum remain
+        const grouped = remainList.data.reduce((acc, item) => {
+          const existing = acc.find(g => g.name === item.name);
+          if (existing) {
+            existing.remain += item.remain;
+          } else {
+            acc.push({ name: item.name, remain: item.remain });
+          }
+          return acc;
+        }, [] as Array<{ name: string; remain: number }>);
+        
+        setPendingList(grouped);
+      } else {
+        setPendingList([]);
+      }
+      } catch {
+      // Silently fail - don't show error for this
+    } finally {
+      setLoadingRemain(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRemainState();
+    const interval = setInterval(fetchRemainState, 30000); // Refresh every 30 seconds
+    return () => clearInterval(interval);
+  }, [fetchRemainState]);
 
   const uniqueStatuses = useMemo(() => {
     const statusMap = new Map<number, string>();
@@ -258,6 +305,11 @@ const CarManagement = () => {
     },
   ];
 
+  const handlePendingUpdate = () => {
+    fetchRemainState();
+    fetchCars();
+  };
+
   return (
     <div>
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
@@ -267,21 +319,49 @@ const CarManagement = () => {
             <p style={{ color: '#666', fontSize: 14 }}>Quản lý thông tin xe trong hệ thống</p>
           </div>
         </Col>
-        <Col xs={24} md={12} style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Space wrap>
-            <Button icon={<DownloadOutlined />}>
-              <span style={{ display: window.innerWidth < 576 ? 'none' : 'inline' }}>Nhập từ Excel</span>
-            </Button>
+      </Row>
+
+      {totalRemain > 0 && (
+        <Alert
+          message={
+            <Space>
+              <ExclamationCircleOutlined />
+              <span>
+                Có <strong>{totalRemain}</strong> xe chưa hoàn tất thông tin
+              </span>
+            </Space>
+          }
+          description={
+            <div style={{ marginTop: 8 }}>
+              {pendingList.length > 0 ? (
+                <Space wrap>
+                  {pendingList.map((item, index) => (
+                    <Tag key={index} color="orange" style={{ marginBottom: 4 }}>
+                      <strong>{item.name}</strong> - Cần nhập thông tin: <strong>{item.remain} xe</strong>
+                    </Tag>
+                  ))}
+                </Space>
+              ) : (
+                <span>Có xe cần nhập thông tin số khung/số máy</span>
+              )}
+            </div>
+          }
+          type="warning"
+          showIcon
+          action={
             <Button
               type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => navigate('/cars/add')}
+              danger
+              onClick={() => setPendingModalOpen(true)}
+              loading={loadingRemain}
             >
-              <span style={{ display: window.innerWidth < 576 ? 'none' : 'inline' }}>Thêm mới</span>
+              Cập nhật ngay
             </Button>
-          </Space>
-        </Col>
-      </Row>
+          }
+          style={{ marginBottom: 16 }}
+          closable
+        />
+      )}
 
       <Card style={{ marginBottom: 16 }}>
         <Input
@@ -420,6 +500,12 @@ const CarManagement = () => {
           />
         </div>
       </Card>
+
+      <PendingCarUpdateModal
+        open={pendingModalOpen}
+        onClose={() => setPendingModalOpen(false)}
+        onUpdate={handlePendingUpdate}
+      />
     </div>
   );
 };

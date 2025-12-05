@@ -1,31 +1,16 @@
-import { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Card, Space, Row, Col, Statistic, Radio, Table } from 'antd';
-import { DollarOutlined, CarOutlined, TrophyOutlined, ShoppingCartOutlined, ArrowUpOutlined } from '@ant-design/icons';
-
-const CustomPieTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: { name: string; value: number; percent: number } }> }) => {
-  if (active && payload && payload.length) {
-    const data = payload[0]?.payload;
-    if (data) {
-      return (
-        <div style={{ backgroundColor: 'white', padding: 12, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.15)', zIndex: 2000 }}>
-          <p style={{ fontWeight: 'bold', marginBottom: 4 }}>{data.name}</p>
-          <p style={{ fontSize: 12, marginBottom: 4 }}>
-            Giá trị: <span style={{ fontWeight: 500 }}>{data.value} triệu VNĐ</span>
-          </p>
-          <p style={{ fontSize: 12 }}>
-            Tỉ trọng: <span style={{ fontWeight: 500 }}>{data.percent}%</span>
-          </p>
-        </div>
-      );
-    }
-  }
-  return null;
-};
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card, Row, Col, Statistic, Radio, Table, Button, Alert } from 'antd';
+import { DollarOutlined, CarOutlined, TrophyOutlined, ShoppingCartOutlined, ArrowUpOutlined, ExclamationCircleOutlined, EditOutlined } from '@ant-design/icons';
+import { listProducts, type ProductDto } from '../services/productService';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [timeRange, setTimeRange] = useState<'month' | 'year'>('month');
   const [isMobile, setIsMobile] = useState(false);
+  const [incompleteCarsCount, setIncompleteCarsCount] = useState(0);
+  const [incompleteCarsLoading, setIncompleteCarsLoading] = useState(false);
+  const [incompleteCarsByGroup, setIncompleteCarsByGroup] = useState<Array<{ name: string; count: number }>>([]);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 576);
@@ -34,29 +19,42 @@ const Dashboard = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const revenueData = [
-    { month: 'T1', '2020': 60, '2021': 70, '2022': 80 },
-    { month: 'T2', '2020': 65, '2021': 75, '2022': 85 },
-    { month: 'T3', '2020': 70, '2021': 80, '2022': 90 },
-    { month: 'T4', '2020': 75, '2021': 85, '2022': 95 },
-    { month: 'T5', '2020': 80, '2021': 90, '2022': 100 },
-    { month: 'T6', '2020': 85, '2021': 95, '2022': 100 },
-    { month: 'T7', '2020': 90, '2021': 100, '2022': 100 },
-    { month: 'T8', '2020': 85, '2021': 95, '2022': 100 },
-    { month: 'T9', '2020': 80, '2021': 90, '2022': 95 },
-    { month: 'T10', '2020': 75, '2021': 85, '2022': 90 },
-    { month: 'T11', '2020': 70, '2021': 80, '2022': 85 },
-    { month: 'T12', '2020': 65, '2021': 75, '2022': 80 },
-  ];
+  const fetchIncompleteCars = useCallback(async () => {
+    setIncompleteCarsLoading(true);
+    try {
+      const response = await listProducts({
+        page: 1,
+        limit: 1000,
+        sortBy: 'created_at',
+        sortOrder: 'desc',
+      });
 
-  const donutData = [
-    { name: 'Honda Vision 2025', value: 79.31, percent: 13.16, color: '#9333EA' },
-    { name: 'Honda SH Mode 2025', value: 202.38, percent: 33.63, color: '#F97316' },
-    { name: 'Air Blade', value: 158.41, percent: 26.32, color: '#3B82F6' },
-    { name: 'Wave Alpha 110', value: 161.74, percent: 26.87, color: '#FBBF24' },
-  ];
+      const incomplete = response.data.filter(
+        (product: ProductDto) => !product.chassisNumber || !product.engineNumber
+      );
 
-  const COLORS = ['#9333EA', '#F97316', '#3B82F6', '#FBBF24'];
+      setIncompleteCarsCount(incomplete.length);
+
+      // Group by name
+      const grouped = new Map<string, number>();
+      incomplete.forEach((product: ProductDto) => {
+        const key = product.name;
+        grouped.set(key, (grouped.get(key) || 0) + 1);
+      });
+
+      setIncompleteCarsByGroup(
+        Array.from(grouped.entries()).map(([name, count]) => ({ name, count }))
+      );
+    } catch (error) {
+      console.error('Không thể tải danh sách xe chưa hoàn tất:', error);
+    } finally {
+      setIncompleteCarsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchIncompleteCars();
+  }, [fetchIncompleteCars]);
 
   const topProducts = [
     { key: 1, rank: 1, name: 'Honda SH Mode 2025', sales: 156, revenue: '15.600' },
@@ -81,6 +79,41 @@ const Dashboard = () => {
           <Radio.Button value="year">Theo năm</Radio.Button>
         </Radio.Group>
       </Card>
+
+      {/* Alert for incomplete cars */}
+      {incompleteCarsCount > 0 && (
+        <Alert
+          message={
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+              <div>
+                <ExclamationCircleOutlined style={{ marginRight: 8, color: '#ff4d4f' }} />
+                <strong>Có {incompleteCarsCount} xe chưa hoàn tất thông tin</strong>
+                <div style={{ marginTop: 4, fontSize: 13, color: '#666' }}>
+                  {incompleteCarsByGroup.map((group, idx) => (
+                    <span key={group.name}>
+                      {group.name}: {group.count} xe
+                      {idx < incompleteCarsByGroup.length - 1 ? ', ' : ''}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <Button
+                type="primary"
+                danger
+                icon={<EditOutlined />}
+                onClick={() => navigate('/cars')}
+                loading={incompleteCarsLoading}
+              >
+                Cập nhật ngay
+              </Button>
+            </div>
+          }
+          type="warning"
+          showIcon={false}
+          style={{ marginBottom: 24, border: '1px solid #ffb84d', backgroundColor: '#fffbe6' }}
+          closable
+        />
+      )}
 
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} lg={6}>
@@ -139,139 +172,6 @@ const Dashboard = () => {
         </Col>
       </Row>
 
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} lg={12}>
-          <Card title={`Biểu đồ doanh thu ${timeRange === 'month' ? 'theo tháng' : 'theo năm'}`}>
-            <div style={{ height: 420 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={revenueData}
-                  margin={{
-                    top: 20,
-                    right: 30,
-                    left: 20,
-                    bottom: 60,
-                  }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                  <XAxis
-                    dataKey="month"
-                    tick={{ fill: '#6B7280', fontSize: 12 }}
-                    angle={-45}
-                    textAnchor="end"
-                    height={80}
-                  />
-                  <YAxis
-                    tick={{ fill: '#6B7280', fontSize: 12 }}
-                    label={{ value: 'Doanh thu (%)', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: '#6B7280' } }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'white',
-                      border: '1px solid #E5E7EB',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                    }}
-                    cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
-                  />
-                  <Legend
-                    // wrapperStyle={{ paddingTop: '20px' }}
-                    iconType="rect"
-                  />
-                  <Bar
-                    dataKey="2020"
-                    fill="#9333EA"
-                    radius={[8, 8, 0, 0]}
-                    name="2020"
-                  />
-                  <Bar
-                    dataKey="2021"
-                    fill="#F97316"
-                    radius={[8, 8, 0, 0]}
-                    name="2021"
-                  />
-                  <Bar
-                    dataKey="2022"
-                    fill="#3B82F6"
-                    radius={[8, 8, 0, 0]}
-                    name="2022"
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} lg={12}>
-          <Card title="Tỉ trọng doanh thu theo loại xe">
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 32 }}>
-              <div style={{ position: 'relative', width: '100%', maxWidth: 320 }}>
-                <ResponsiveContainer width="100%" height={280}>
-                  <PieChart>
-                    <Pie
-                      data={donutData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ percent }) => percent ? `${percent.toFixed(2)}%` : ''}
-                      outerRadius={100}
-                      innerRadius={60}
-                      fill="#8884d8"
-                      dataKey="percent"
-                      stroke="none"
-                    >
-                      {donutData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<CustomPieTooltip />} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div style={{
-                  position: 'absolute',
-                  zIndex: 1000,
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  textAlign: 'center',
-                  pointerEvents: 'none'
-                }}>
-                  <p style={{ fontSize: 24, fontWeight: 'bold', margin: 0 }}>Xe</p>
-                </div>
-              </div>
-              <div style={{ width: '100%' }}>
-                <Space direction="vertical" style={{ width: '100%' }} size="middle">
-                  {donutData.map((item, index) => (
-                    <div key={index} style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 12,
-                      padding: 12,
-                      backgroundColor: '#f5f5f5',
-                      borderRadius: 8,
-                    }}>
-                      <div
-                        style={{
-                          width: 20,
-                          height: 20,
-                          borderRadius: 4,
-                          backgroundColor: item.color,
-                        }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: 14, fontWeight: 'bold', margin: 0 }}>{item.name}</p>
-                        <p style={{ fontSize: 12, color: '#666', margin: 0 }}>{item.value} triệu VNĐ</p>
-                      </div>
-                      <div>
-                        <p style={{ fontSize: 14, fontWeight: 'bold', margin: 0 }}>{item.percent}%</p>
-                      </div>
-                    </div>
-                  ))}
-                </Space>
-              </div>
-            </div>
-          </Card>
-        </Col>
-      </Row>
 
       <Card title="Xe bán chạy nhất">
         <Table
@@ -307,11 +207,15 @@ const Dashboard = () => {
               dataIndex: 'revenue',
               key: 'revenue',
               align: 'right',
-              render: (revenue: string) => (
-                <span style={{ fontWeight: 500, color: '#52c41a' }}>
-                  {revenue} triệu VNĐ
-                </span>
-              ),
+              render: (revenue: string) => {
+                // Convert from millions to billions
+                const billions = (parseFloat(revenue) / 1000).toFixed(3);
+                return (
+                  <span style={{ fontWeight: 500, color: '#52c41a' }}>
+                    {billions} tỷ VNĐ
+                  </span>
+                );
+              },
             },
           ]}
           pagination={false}
