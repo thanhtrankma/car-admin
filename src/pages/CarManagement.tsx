@@ -201,6 +201,8 @@ const CarManagement = () => {
       width: 80,
       render: (images: string[] | undefined, record) => {
         const firstImage = formatImageUrl(images?.[0]);
+        console.log('record', record);
+        
         if (!firstImage) {
           return <div style={{ width: 48, height: 48, background: '#f5f5f5', borderRadius: 8 }} />;
         }
@@ -281,13 +283,13 @@ const CarManagement = () => {
           <Button 
             type="link" 
             icon={<InfoCircleOutlined />} 
-            onClick={() => navigate(`/cars/${record.code}`)}
+            onClick={() => navigate(`/cars/${record.id}`)}
             title="Xem chi tiết"
           />
           <Button
             type="link"
             icon={<EditOutlined />}
-            onClick={() => navigate(`/cars/${record.code}/edit`)}
+            onClick={() => navigate(`/cars/${record.id}/edit`)}
             title="Chỉnh sửa"
           />
           <Popconfirm

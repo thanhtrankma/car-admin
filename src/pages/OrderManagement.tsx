@@ -11,6 +11,10 @@ interface OrderItem {
   productId: string;
   carCode: string;
   carName: string;
+  sku?: string;
+  version?: string;
+  color?: string;
+  cc?: string;
   quantity: number;
   unitPrice: number;
   total: number;
@@ -91,16 +95,21 @@ const OrderManagement = () => {
 
   const addItem = (values: Pick<OrderFormValues, 'productId' | 'quantity'>) => {
     const product = products.find((c) => c.id === values.productId);
-    if (!product) return;
+    if (!product) {
+      message.warning('Không tìm thấy sản phẩm');
+      return;
+    }
     const quantity = values.quantity || 1;
 
     const existingItem = orderItems.find(item => item.productId === product.id);
     if (existingItem) {
+      const newQuantity = existingItem.quantity + quantity;
       setOrderItems(orderItems.map(item =>
         item.productId === product.id
-          ? { ...item, quantity: item.quantity + quantity, total: (item.quantity + quantity) * item.unitPrice }
+          ? { ...item, quantity: newQuantity, total: newQuantity * item.unitPrice }
           : item
       ));
+      message.success(`Đã cập nhật ${product.name}: ${existingItem.quantity} → ${newQuantity}`);
     } else {
       setOrderItems([
         ...orderItems,
@@ -108,11 +117,16 @@ const OrderManagement = () => {
           productId: product.id,
           carCode: product.code,
           carName: product.name,
+          sku: product.sku,
+          version: product.version,
+          color: product.color,
+          cc: product.cc,
           quantity,
           unitPrice: product.price,
           total: quantity * product.price,
         },
       ]);
+      message.success(`Đã thêm ${product.name} (x${quantity}) vào hóa đơn`);
     }
     form.setFieldsValue({ productId: undefined, quantity: 1 });
   };
@@ -288,19 +302,28 @@ TỔNG CỘNG: ${formatPrice(detail.invoice.totalAmount)} VNĐ
 
   const itemColumns: ColumnsType<OrderItem> = [
     {
-      title: 'Mã xe',
-      dataIndex: 'carCode',
-      key: 'carCode',
-    },
-    {
-      title: 'Tên xe',
-      dataIndex: 'carName',
-      key: 'carName',
+      title: 'Thông tin sản phẩm',
+      key: 'productInfo',
+      width: 300,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>{record.carName}</div>
+          <div style={{ fontSize: 12, color: '#666', marginBottom: 2 }}>
+            <strong>Mã:</strong> {record.carCode} {record.sku && `• SKU: ${record.sku}`}
+          </div>
+          <div style={{ fontSize: 12, color: '#999' }}>
+            {[record.version && `Phiên bản: ${record.version}`, record.color && `Màu: ${record.color}`, record.cc && `${record.cc}cc`]
+              .filter(Boolean)
+              .join(' • ')}
+          </div>
+        </div>
+      ),
     },
     {
       title: 'Số lượng',
       dataIndex: 'quantity',
       key: 'quantity',
+      width: 120,
       render: (quantity, record) => (
         <InputNumber
           min={1}
@@ -314,17 +337,20 @@ TỔNG CỘNG: ${formatPrice(detail.invoice.totalAmount)} VNĐ
       title: 'Đơn giá',
       dataIndex: 'unitPrice',
       key: 'unitPrice',
+      width: 150,
       render: (price) => formatPrice(price) + ' VNĐ',
     },
     {
       title: 'Thành tiền',
       dataIndex: 'total',
       key: 'total',
+      width: 150,
       render: (total) => <strong>{formatPrice(total)} VNĐ</strong>,
     },
     {
       title: 'Thao tác',
       key: 'action',
+      width: 80,
       render: (_, record) => (
         <Button
           type="link"
@@ -466,44 +492,151 @@ TỔNG CỘNG: ${formatPrice(detail.invoice.totalAmount)} VNĐ
             <Input placeholder="Nhập địa chỉ khách hàng" size="large" />
           </Form.Item>
 
-          <Card title="Thêm sản phẩm" style={{ marginBottom: 16 }}>
-            <Form.Item
-              label="Chọn xe"
-              name="productId"
-              rules={[{ required: true, message: 'Vui lòng chọn xe' }]}
-            >
-              <Select
-                placeholder="Chọn xe"
-                size="large"
-                style={{ width: '100%' }}
-                loading={productLoading}
-                showSearch
-                optionFilterProp="label"
-              >
-                {products.map((product) => (
-                  <Option key={product.id} value={product.id} label={`${product.name} ${product.code}`}>
-                    {product.name} ({product.code}) - {formatPrice(product.price)} VNĐ
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-
-            <Form.Item
-              label="Số lượng"
-              name="quantity"
-            >
-              <InputNumber min={1} style={{ width: '100%' }} size="large" />
-            </Form.Item>
-
-            <Form.Item>
-              <Button type="primary" onClick={() => {
-                form.validateFields(['productId', 'quantity']).then((values) => {
-                  addItem(values);
-                });
-              }}>
-                Thêm
-              </Button>
-            </Form.Item>
+          <Card 
+            title={
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Thêm sản phẩm</span>
+                {orderItems.length > 0 && (
+                  <span style={{ fontSize: 14, color: '#666', fontWeight: 'normal' }}>
+                    Đã thêm: {orderItems.length} sản phẩm
+                  </span>
+                )}
+              </div>
+            } 
+            style={{ marginBottom: 16 }}
+          >
+            <Row gutter={[12, 12]} align="middle">
+              <Col xs={24} sm={12} md={10}>
+                <Form.Item
+                  name="productId"
+                  rules={[{ required: true, message: 'Vui lòng chọn xe' }]}
+                  style={{ marginBottom: 0 }}
+                >
+                  <Select
+                    placeholder="Chọn xe"
+                    size="large"
+                    style={{ width: '100%' }}
+                    loading={productLoading}
+                    showSearch
+                    optionFilterProp="label"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && form.getFieldValue('productId')) {
+                        e.preventDefault();
+                        form.validateFields(['productId', 'quantity']).then((values) => {
+                          addItem(values);
+                        }).catch(() => {});
+                      }
+                    }}
+                  >
+                    {products.map((product) => {
+                      const infoParts = [];
+                      if (product.version) infoParts.push(`Phiên bản: ${product.version}`);
+                      if (product.color) infoParts.push(`Màu: ${product.color}`);
+                      if (product.cc) infoParts.push(`${product.cc}cc`);
+                      const infoText = infoParts.length > 0 ? infoParts.join(' • ') : '';
+                      
+                      return (
+                        <Option 
+                          key={product.id} 
+                          value={product.id} 
+                          label={`${product.name} ${product.code} ${product.version || ''} ${product.color || ''}`}
+                        >
+                          <div style={{ padding: '4px 0' }}>
+                            <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>
+                              {product.name}
+                            </div>
+                            <div style={{ fontSize: 12, color: '#666', marginBottom: 2 }}>
+                              <strong>Mã:</strong> {product.code} {product.sku && `• SKU: ${product.sku}`}
+                            </div>
+                            {infoText && (
+                              <div style={{ fontSize: 12, color: '#999', marginBottom: 2 }}>
+                                {infoText}
+                              </div>
+                            )}
+                            <div style={{ fontSize: 13, color: '#1890ff', fontWeight: 500, marginTop: 4 }}>
+                              {formatPrice(product.price)} VNĐ
+                              {product.quantity !== undefined && (
+                                <span style={{ marginLeft: 8, color: product.quantity > 0 ? '#52c41a' : '#ff4d4f', fontSize: 11 }}>
+                                  • Tồn kho: {product.quantity}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </Option>
+                      );
+                    })}
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={8} md={6}>
+                <Form.Item
+                  name="quantity"
+                  style={{ marginBottom: 0 }}
+                >
+                  <InputNumber 
+                    min={1} 
+                    style={{ width: '100%' }} 
+                    size="large" 
+                    placeholder="Số lượng"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && form.getFieldValue('productId')) {
+                        e.preventDefault();
+                        form.validateFields(['productId', 'quantity']).then((values) => {
+                          addItem(values);
+                        }).catch(() => {});
+                      }
+                    }}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={4} md={4}>
+                <Button 
+                  type="primary" 
+                  size="large"
+                  block
+                  icon={<PlusOutlined />}
+                  onClick={() => {
+                    form.validateFields(['productId', 'quantity']).then((values) => {
+                      addItem(values);
+                      // Focus back to select after adding
+                      setTimeout(() => {
+                        const selectElement = document.querySelector('[name="productId"]') as HTMLElement;
+                        if (selectElement) {
+                          selectElement.focus();
+                        }
+                      }, 100);
+                    }).catch(() => {
+                      message.warning('Vui lòng chọn xe trước khi thêm');
+                    });
+                  }}
+                >
+                  Thêm
+                </Button>
+              </Col>
+              <Col xs={24} sm={24} md={4}>
+                <Button 
+                  type="default"
+                  size="large"
+                  block
+                  onClick={() => {
+                    const productId = form.getFieldValue('productId');
+                    if (!productId) {
+                      message.warning('Vui lòng chọn xe trước');
+                      return;
+                    }
+                    form.validateFields(['productId', 'quantity']).then((values) => {
+                      addItem({ ...values, quantity: 1 });
+                      form.setFieldsValue({ productId: undefined, quantity: 1 });
+                    }).catch(() => {});
+                  }}
+                >
+                  Thêm nhanh (x1)
+                </Button>
+              </Col>
+            </Row>
+            <div style={{ marginTop: 12, fontSize: 12, color: '#999' }}>
+              💡 Mẹo: Nhấn Enter sau khi chọn xe hoặc nhập số lượng để thêm nhanh
+            </div>
           </Card>
 
           {orderItems.length > 0 && (

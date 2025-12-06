@@ -111,7 +111,7 @@ function App() {
           }
         />
         <Route
-          path="/cars/:code"
+          path="/cars/:id"
           element={
             isAuthenticated ? (
               <Layout onLogout={handleLogout}>
@@ -123,7 +123,7 @@ function App() {
           }
         />
         <Route
-          path="/cars/:code/edit"
+          path="/cars/:id/edit"
           element={
             isAuthenticated ? (
               <Layout onLogout={handleLogout}>

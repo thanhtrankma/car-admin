@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Card, Button, Space, Row, Col, Descriptions, Tag, Image, Spin, message } from 'antd';
-import { getProductByCode, type ProductDto } from '../services/productService';
+import { getProductById, type ProductDto } from '../services/productService';
 
 const VEHICLE_TYPE_LABELS: Record<number, string> = {
   1: 'Xe tay ga',
@@ -25,7 +25,7 @@ const formatImageUrl = (url: string) => {
 
 const CarDetail = () => {
   const navigate = useNavigate();
-  const { code } = useParams<{ code: string }>();
+  const { id } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
   const [car, setCar] = useState<ProductDto | null>(null);
 
@@ -33,11 +33,11 @@ const CarDetail = () => {
     const fetchCarDetail = async () => {
       setLoading(true);
       try {
-        if (!code) {
+        if (!id) {
           navigate('/cars');
           return;
         }
-        const product = await getProductByCode(code);
+        const product = await getProductById(id);
         setCar(product);
       } catch {
         message.error('Không thể tải thông tin xe');
@@ -47,12 +47,12 @@ const CarDetail = () => {
       }
     };
 
-    if (code) {
+    if (id) {
       fetchCarDetail();
     } else {
       navigate('/cars');
     }
-  }, [code, navigate]);
+  }, [id, navigate]);
 
   const formatPrice = (price?: number) => {
     if (!price) return 'N/A';
@@ -105,7 +105,7 @@ const CarDetail = () => {
                 <strong>{car.sku || 'N/A'}</strong>
               </Descriptions.Item>
               <Descriptions.Item label="Mã xe">
-                <strong>{car.code || 'N/A'}</strong>
+                <strong>{car.id || 'N/A'}</strong>
               </Descriptions.Item>
               <Descriptions.Item label="Tên xe">
                 <strong style={{ fontSize: 18 }}>{car.name}</strong>
@@ -193,7 +193,7 @@ const CarDetail = () => {
           <Button onClick={() => navigate('/cars')}>
             Quay lại
           </Button>
-          <Button type="primary" onClick={() => navigate(`/cars/${car.code}/edit`)}>
+          <Button type="primary" onClick={() => navigate(`/cars/${id}/edit`)}>
             Chỉnh sửa
           </Button>
         </Space>
