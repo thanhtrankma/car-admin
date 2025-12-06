@@ -13,6 +13,7 @@ import AccountManagement from './pages/AccountManagement';
 import StockIn from './pages/StockIn';
 import Reports from './pages/Reports';
 import Profile from './pages/Profile';
+import PendingCarUpdate from './pages/PendingCarUpdate';
 import Layout from './components/Layout';
 import AdminRoute from './middleware/adminOnly';
 
@@ -163,6 +164,18 @@ function App() {
             isAuthenticated ? (
               <Layout onLogout={handleLogout}>
                 <StockIn />
+              </Layout>
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/pending-cars"
+          element={
+            isAuthenticated ? (
+              <Layout onLogout={handleLogout}>
+                <PendingCarUpdate />
               </Layout>
             ) : (
               <Navigate to="/login" replace />

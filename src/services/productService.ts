@@ -73,7 +73,7 @@ export interface ProductPayload {
   quantity?: number;
   warehouseStatus: number;
   images?: string[];
-  wareHouseId?: string;
+  productRemainId?: string;
 }
 
 export interface ProductTypeDto {

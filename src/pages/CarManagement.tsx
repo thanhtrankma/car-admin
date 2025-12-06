@@ -4,7 +4,6 @@ import { Table, Input, Button, Card, Space, Select, Tag, Pagination, message, Po
 import type { ColumnsType } from 'antd/es/table';
 import { SearchOutlined, InfoCircleOutlined, DeleteOutlined, EditOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { listProducts, deleteProduct, type ProductDto, getProductRemainState, listProductRemain } from '../services/productService';
-import PendingCarUpdateModal from '../components/PendingCarUpdateModal';
 
 const { Option } = Select;
 
@@ -85,7 +84,6 @@ const CarManagement = () => {
   const [pageSize, setPageSize] = useState(10);
   const [totalRemain, setTotalRemain] = useState(0);
   const [pendingList, setPendingList] = useState<Array<{ name: string; remain: number }>>([]);
-  const [pendingModalOpen, setPendingModalOpen] = useState(false);
   const [loadingRemain, setLoadingRemain] = useState(false);
 
   const formatPrice = (price: number) => {
@@ -305,10 +303,6 @@ const CarManagement = () => {
     },
   ];
 
-  const handlePendingUpdate = () => {
-    fetchRemainState();
-    fetchCars();
-  };
 
   return (
     <div>
@@ -352,7 +346,7 @@ const CarManagement = () => {
             <Button
               type="primary"
               danger
-              onClick={() => setPendingModalOpen(true)}
+              onClick={() => navigate('/pending-cars')}
               loading={loadingRemain}
             >
               Cập nhật ngay
@@ -501,11 +495,6 @@ const CarManagement = () => {
         </div>
       </Card>
 
-      <PendingCarUpdateModal
-        open={pendingModalOpen}
-        onClose={() => setPendingModalOpen(false)}
-        onUpdate={handlePendingUpdate}
-      />
     </div>
   );
 };
