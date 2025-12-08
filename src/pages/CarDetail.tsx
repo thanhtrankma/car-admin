@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { Card, Button, Space, Row, Col, Descriptions, Tag, Image, Spin, message } from 'antd';
+import { Card, Button, Space, Row, Col, Descriptions, Tag, Image, Spin, message, Carousel } from 'antd';
 import { getProductById, type ProductDto } from '../services/productService';
 
 const VEHICLE_TYPE_LABELS: Record<number, string> = {
@@ -61,7 +61,17 @@ const CarDetail = () => {
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('vi-VN');
+    try {
+      return new Date(dateString).toLocaleString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return dateString;
+    }
   };
 
   const getVehicleTypeLabel = (value?: number) => {
@@ -88,13 +98,23 @@ const CarDetail = () => {
 
   return (
     <div>
-      <Space align="center" style={{ marginBottom: 24 }}>
-        <Button
-          icon={<ArrowLeft />}
-          onClick={() => navigate('/cars')}
-          type="text"
-        />
-        <h1 style={{ fontSize: 24, fontWeight: 'bold', margin: 0 }}>Chi tiết xe</h1>
+      <Space style={{ marginBottom: 24, width: '100%', justifyContent: 'space-between' }} wrap>
+        <Space align="center">
+          <Button
+            icon={<ArrowLeft />}
+            onClick={() => navigate('/cars')}
+            type="text"
+          />
+          <h1 style={{ fontSize: 24, fontWeight: 'bold', margin: 0 }}>Chi tiết xe</h1>
+        </Space>
+        <Space>
+          <Button onClick={() => navigate('/cars')}>
+            Quay lại
+          </Button>
+          <Button type="primary" onClick={() => navigate(`/cars/${id}/edit`)}>
+            Chỉnh sửa
+          </Button>
+        </Space>
       </Space>
 
       <Row gutter={[24, 24]}>
@@ -105,7 +125,7 @@ const CarDetail = () => {
                 <strong>{car.sku || 'N/A'}</strong>
               </Descriptions.Item>
               <Descriptions.Item label="Mã xe">
-                <strong>{car.id || 'N/A'}</strong>
+                <strong>{car.code || 'N/A'}</strong>
               </Descriptions.Item>
               <Descriptions.Item label="Tên xe">
                 <strong style={{ fontSize: 18 }}>{car.name}</strong>
@@ -113,7 +133,10 @@ const CarDetail = () => {
               <Descriptions.Item label="Loại xe">
                 {getVehicleTypeLabel(car.vehicleType)}
               </Descriptions.Item>
-              <Descriptions.Item label="Phiên bản">{car.version}</Descriptions.Item>
+              <Descriptions.Item label="Phiên bản">{car.version || 'N/A'}</Descriptions.Item>
+              <Descriptions.Item label="Dòng">
+                {car.line || 'N/A'}
+              </Descriptions.Item>
               <Descriptions.Item label="Trọng lượng">
                 {car.weight || 'N/A'}
               </Descriptions.Item>
@@ -156,8 +179,32 @@ const CarDetail = () => {
                   {formatPrice(car.price)}
                 </strong>
               </Descriptions.Item>
-              <Descriptions.Item label="Số lượng">
-                {car.quantity ?? 'N/A'}
+            </Descriptions>
+          </Card>
+
+          <Card title="Thông tin hệ thống" style={{ marginBottom: 24 }}>
+            <Descriptions column={1} bordered>
+              <Descriptions.Item label="Người tạo">
+                {car.createdBy ? (
+                  <div>
+                    <div><strong>{car.createdBy.username}</strong></div>
+                    <div style={{ fontSize: 12, color: '#666' }}>{car.createdBy.email}</div>
+                  </div>
+                ) : 'N/A'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Thời gian tạo">
+                {formatDate(car.created_at)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Người cập nhật">
+                {car.updatedBy ? (
+                  <div>
+                    <div><strong>{car.updatedBy.username}</strong></div>
+                    <div style={{ fontSize: 12, color: '#666' }}>{car.updatedBy.email}</div>
+                  </div>
+                ) : 'N/A'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Thời gian cập nhật">
+                {formatDate(car.updated_at)}
               </Descriptions.Item>
             </Descriptions>
           </Card>
@@ -167,17 +214,32 @@ const CarDetail = () => {
           <Card title="Hình ảnh" style={{ marginBottom: 24 }}>
             {car.images && car.images.length > 0 ? (
               <Image.PreviewGroup>
-                <Row gutter={[8, 8]}>
+                <Carousel
+                  autoplay
+                  dots
+                  infinite
+                  style={{ width: '100%' }}
+                >
                   {car.images.map((img, index) => (
-                    <Col xs={12} sm={8} key={index}>
+                    <div key={index}>
                       <Image
                         src={formatImageUrl(img)}
                         alt={`${car.name} - ${index + 1}`}
-                        style={{ width: '100%', borderRadius: 4 }}
+                        style={{ 
+                          width: '100%', 
+                          height: 'auto',
+                          maxHeight: '400px',
+                          objectFit: 'contain',
+                          borderRadius: 8,
+                          display: 'block'
+                        }}
+                        preview={{
+                          mask: 'Xem ảnh',
+                        }}
                       />
-                    </Col>
+                    </div>
                   ))}
-                </Row>
+                </Carousel>
               </Image.PreviewGroup>
             ) : (
               <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
@@ -187,17 +249,6 @@ const CarDetail = () => {
           </Card>
         </Col>
       </Row>
-
-      <Card>
-        <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-          <Button onClick={() => navigate('/cars')}>
-            Quay lại
-          </Button>
-          <Button type="primary" onClick={() => navigate(`/cars/${id}/edit`)}>
-            Chỉnh sửa
-          </Button>
-        </Space>
-      </Card>
     </div>
   );
 };

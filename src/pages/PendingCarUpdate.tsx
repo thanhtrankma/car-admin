@@ -276,6 +276,7 @@ const PendingCarUpdate = () => {
         name: values.name,
         vehicleType: values.vehicleType,
         version: values.version,
+        line: values.line,
         weight: values.weight,
         cc: values.cc,
         manufacturedDate: values.manufacturedDate,
@@ -620,11 +621,11 @@ const PendingCarUpdate = () => {
                           </Select>
                         </Form.Item>
 
-                        <Form.Item label="Số khung" name="chassisNumber">
+                        <Form.Item label="Số khung" name="chassisNumber" rules={[{ required: true, message: 'Vui lòng nhập số khung' }]}>
                           <Input placeholder="Nhập số khung" size="large" />
                         </Form.Item>
 
-                        <Form.Item label="Số máy" name="engineNumber">
+                        <Form.Item label="Số máy" name="engineNumber" rules={[{ required: true, message: 'Vui lòng nhập số máy' }]}>
                           <Input placeholder="Nhập số máy" size="large" />
                         </Form.Item>
                       </Col>
@@ -645,11 +646,7 @@ const PendingCarUpdate = () => {
                         </Form.Item>
 
                         <Form.Item
-                          label={
-                            <>
-                              Trạng thái trong kho <span style={{ color: 'red' }}>*</span>
-                            </>
-                          }
+                          label="Trạng thái trong kho"
                           name="warehouseStatus"
                           rules={[{ required: true, message: 'Vui lòng chọn trạng thái kho' }]}
                         >

@@ -79,7 +79,6 @@ export interface CreateInvoicePayload {
   customerAddress?: string;
   items: {
     productId: string;
-    quantity: number;
   }[];
 }
 

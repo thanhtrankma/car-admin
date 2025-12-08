@@ -278,17 +278,6 @@ const CustomerManagement = () => {
           </Form.Item>
 
           <Form.Item
-            label="Email"
-            name="email"
-            rules={[
-              { required: true, message: 'Vui lòng nhập email' },
-              { type: 'email', message: 'Email không hợp lệ' },
-            ]}
-          >
-            <Input placeholder="Nhập email" size="large" />
-          </Form.Item>
-
-          <Form.Item
             label="Số điện thoại"
             name="phone"
             rules={[{ required: true, message: 'Vui lòng nhập số điện thoại' }]}
@@ -297,9 +286,22 @@ const CustomerManagement = () => {
           </Form.Item>
 
           <Form.Item
+            label="Email"
+            name="email"
+            rules={[
+              // { required: true, message: 'Vui lòng nhập email' },
+              { type: 'email', message: 'Email không hợp lệ' },
+            ]}
+          >
+            <Input placeholder="Nhập email" size="large" />
+          </Form.Item>
+
+          
+
+          <Form.Item
             label="Địa chỉ"
             name="address"
-            rules={[{ required: true, message: 'Vui lòng nhập địa chỉ' }]}
+            // rules={[{ required: true, message: 'Vui lòng nhập địa chỉ' }]}
           >
             <Input placeholder="Nhập địa chỉ" size="large" />
           </Form.Item>

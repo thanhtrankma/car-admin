@@ -1,16 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Row, Col, Statistic, Radio, Table, Button, Alert } from 'antd';
-import { DollarOutlined, CarOutlined, TrophyOutlined, ShoppingCartOutlined, ArrowUpOutlined, ExclamationCircleOutlined, EditOutlined } from '@ant-design/icons';
-import { listProducts, type ProductDto } from '../services/productService';
+import { Card, Row, Col, Statistic, Radio, Table, Button, Alert, Space, Tag } from 'antd';
+import { DollarOutlined, CarOutlined, TrophyOutlined, ShoppingCartOutlined, ArrowUpOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { getProductRemainState, listProductRemain } from '../services/productService';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [timeRange, setTimeRange] = useState<'month' | 'year'>('month');
   const [isMobile, setIsMobile] = useState(false);
-  const [incompleteCarsCount, setIncompleteCarsCount] = useState(0);
-  const [incompleteCarsLoading, setIncompleteCarsLoading] = useState(false);
-  const [incompleteCarsByGroup, setIncompleteCarsByGroup] = useState<Array<{ name: string; count: number }>>([]);
+  const [totalRemain, setTotalRemain] = useState(0);
+  const [pendingList, setPendingList] = useState<Array<{ name: string; remain: number }>>([]);
+  const [loadingRemain, setLoadingRemain] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 576);
@@ -19,42 +19,47 @@ const Dashboard = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const fetchIncompleteCars = useCallback(async () => {
-    setIncompleteCarsLoading(true);
+  const fetchRemainState = useCallback(async () => {
+    setLoadingRemain(true);
     try {
-      const response = await listProducts({
-        page: 1,
-        limit: 1000,
-        sortBy: 'created_at',
-        sortOrder: 'desc',
-      });
-
-      const incomplete = response.data.filter(
-        (product: ProductDto) => !product.chassisNumber || !product.engineNumber
-      );
-
-      setIncompleteCarsCount(incomplete.length);
-
-      // Group by name
-      const grouped = new Map<string, number>();
-      incomplete.forEach((product: ProductDto) => {
-        const key = product.name;
-        grouped.set(key, (grouped.get(key) || 0) + 1);
-      });
-
-      setIncompleteCarsByGroup(
-        Array.from(grouped.entries()).map(([name, count]) => ({ name, count }))
-      );
-    } catch (error) {
-      console.error('Không thể tải danh sách xe chưa hoàn tất:', error);
+      const response = await getProductRemainState();
+      setTotalRemain(response.data.totalRemain);
+      
+      if (response.data.totalRemain > 0) {
+        const remainList = await listProductRemain({
+          page: 1,
+          limit: 100,
+          sortBy: 'created_at',
+          sortOrder: 'desc',
+        });
+        
+        // Group by name and sum remain
+        const grouped = remainList.data.reduce((acc, item) => {
+          const existing = acc.find(g => g.name === item.name);
+          if (existing) {
+            existing.remain += item.remain;
+          } else {
+            acc.push({ name: item.name, remain: item.remain });
+          }
+          return acc;
+        }, [] as Array<{ name: string; remain: number }>);
+        
+        setPendingList(grouped);
+      } else {
+        setPendingList([]);
+      }
+    } catch {
+      // Silently fail - don't show error for this
     } finally {
-      setIncompleteCarsLoading(false);
+      setLoadingRemain(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchIncompleteCars();
-  }, [fetchIncompleteCars]);
+    fetchRemainState();
+    const interval = setInterval(fetchRemainState, 30000); // Refresh every 30 seconds
+    return () => clearInterval(interval);
+  }, [fetchRemainState]);
 
   const topProducts = [
     { key: 1, rank: 1, name: 'Honda SH Mode 2025', sales: 156, revenue: '15.600' },
@@ -80,37 +85,44 @@ const Dashboard = () => {
         </Radio.Group>
       </Card>
 
-      {/* Alert for incomplete cars */}
-      {incompleteCarsCount > 0 && (
+      {totalRemain > 0 && (
         <Alert
           message={
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-              <div>
-                <ExclamationCircleOutlined style={{ marginRight: 8, color: '#ff4d4f' }} />
-                <strong>Có {incompleteCarsCount} xe chưa hoàn tất thông tin</strong>
-                <div style={{ marginTop: 4, fontSize: 13, color: '#666' }}>
-                  {incompleteCarsByGroup.map((group, idx) => (
-                    <span key={group.name}>
-                      {group.name}: {group.count} xe
-                      {idx < incompleteCarsByGroup.length - 1 ? ', ' : ''}
-                    </span>
+            <Space>
+              <ExclamationCircleOutlined />
+              <span>
+                Có <strong>{totalRemain}</strong> xe chưa hoàn tất thông tin
+              </span>
+            </Space>
+          }
+          description={
+            <div style={{ marginTop: 8 }}>
+              {pendingList.length > 0 ? (
+                <Space wrap>
+                  {pendingList.map((item, index) => (
+                    <Tag key={index} color="orange" style={{ marginBottom: 4 }}>
+                      <strong>{item.name}</strong> - Cần nhập thông tin: <strong>{item.remain} xe</strong>
+                    </Tag>
                   ))}
-                </div>
-              </div>
-              <Button
-                type="primary"
-                danger
-                icon={<EditOutlined />}
-                onClick={() => navigate('/cars')}
-                loading={incompleteCarsLoading}
-              >
-                Cập nhật ngay
-              </Button>
+                </Space>
+              ) : (
+                <span>Có xe cần nhập thông tin số khung/số máy</span>
+              )}
             </div>
           }
           type="warning"
-          showIcon={false}
-          style={{ marginBottom: 24, border: '1px solid #ffb84d', backgroundColor: '#fffbe6' }}
+          showIcon
+          action={
+            <Button
+              type="primary"
+              danger
+              onClick={() => navigate('/pending-cars')}
+              loading={loadingRemain}
+            >
+              Cập nhật ngay
+            </Button>
+          }
+          style={{ marginBottom: 16 }}
           closable
         />
       )}

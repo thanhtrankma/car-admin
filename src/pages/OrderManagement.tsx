@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Card, Input, Select, Table, Space, Modal, Form, InputNumber, message, Divider, Row, Col, Typography, Spin } from 'antd';
+import { Button, Card, Input, Select, Table, Space, Modal, Form, message, Divider, Row, Col, Typography, Spin } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, DownloadOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import { listProducts, type ProductDto } from '../services/productService';
@@ -93,13 +93,13 @@ const OrderManagement = () => {
     fetchInvoices();
   }, [fetchInvoices]);
 
-  const addItem = (values: Pick<OrderFormValues, 'productId' | 'quantity'>) => {
+  const addItem = (values: Pick<OrderFormValues, 'productId'>) => {
     const product = products.find((c) => c.id === values.productId);
     if (!product) {
       message.warning('Không tìm thấy sản phẩm');
       return;
     }
-    const quantity = values.quantity || 1;
+    const quantity = 1;
 
     const existingItem = orderItems.find(item => item.productId === product.id);
     if (existingItem) {
@@ -128,7 +128,7 @@ const OrderManagement = () => {
       ]);
       message.success(`Đã thêm ${product.name} (x${quantity}) vào hóa đơn`);
     }
-    form.setFieldsValue({ productId: undefined, quantity: 1 });
+    form.setFieldsValue({ productId: undefined });
   };
 
   const isWithinTimeFilter = useCallback((dateString: string) => {
@@ -175,21 +175,9 @@ const OrderManagement = () => {
     setOrderItems(orderItems.filter(item => item.carCode !== carCode));
   };
 
-  const updateItemQuantity = (carCode: string, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      removeItem(carCode);
-      return;
-    }
-    setOrderItems(orderItems.map(item =>
-      item.carCode === carCode
-        ? { ...item, quantity: newQuantity, total: newQuantity * item.unitPrice }
-        : item
-    ));
-  };
 
   const subtotal = orderItems.reduce((sum, item) => sum + item.total, 0);
-  const vat = subtotal * 0.1;
-  const total = subtotal + vat;
+  const total = subtotal;
 
   const handleSave = (values: OrderFormValues) => {
     if (orderItems.length === 0) {
@@ -204,7 +192,6 @@ const OrderManagement = () => {
       customerAddress: values.customerAddress,
       items: orderItems.map((item) => ({
         productId: item.productId,
-        quantity: item.quantity,
       })),
     };
 
@@ -281,11 +268,10 @@ TỔNG CỘNG: ${formatPrice(detail.invoice.totalAmount)} VNĐ
     return invoiceDetail.details.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
   }, [invoiceDetail]);
 
-  const vatAmount = useMemo(() => Math.round(invoiceSubtotal * 0.1), [invoiceSubtotal]);
   const grandTotal = useMemo(() => {
     if (invoiceDetail?.invoice?.totalAmount) return invoiceDetail.invoice.totalAmount;
-    return invoiceSubtotal + vatAmount;
-  }, [invoiceDetail, invoiceSubtotal, vatAmount]);
+    return invoiceSubtotal;
+  }, [invoiceDetail, invoiceSubtotal]);
 
   const handleCloseDetail = () => {
     setDetailModalOpen(false);
@@ -317,20 +303,6 @@ TỔNG CỘNG: ${formatPrice(detail.invoice.totalAmount)} VNĐ
               .join(' • ')}
           </div>
         </div>
-      ),
-    },
-    {
-      title: 'Số lượng',
-      dataIndex: 'quantity',
-      key: 'quantity',
-      width: 120,
-      render: (quantity, record) => (
-        <InputNumber
-          min={1}
-          value={quantity}
-          onChange={(value) => updateItemQuantity(record.carCode, value || 1)}
-          style={{ width: 100 }}
-        />
       ),
     },
     {
@@ -459,7 +431,7 @@ TỔNG CỘNG: ${formatPrice(detail.invoice.totalAmount)} VNĐ
           form={form}
           layout="vertical"
           onFinish={handleSave}
-          initialValues={{ quantity: 1 }}
+          initialValues={{}}
         >
           <Form.Item
             label="Tên khách hàng"
@@ -509,7 +481,7 @@ TỔNG CỘNG: ${formatPrice(detail.invoice.totalAmount)} VNĐ
               <Col xs={24} sm={12} md={10}>
                 <Form.Item
                   name="productId"
-                  rules={[{ required: true, message: 'Vui lòng chọn xe' }]}
+                  rules={[{ required: orderItems.length > 0 ? false : true, message: 'Vui lòng chọn xe' }]}
                   style={{ marginBottom: 0 }}
                 >
                   <Select
@@ -522,7 +494,7 @@ TỔNG CỘNG: ${formatPrice(detail.invoice.totalAmount)} VNĐ
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && form.getFieldValue('productId')) {
                         e.preventDefault();
-                        form.validateFields(['productId', 'quantity']).then((values) => {
+                        form.validateFields(['productId']).then((values) => {
                           addItem(values);
                         }).catch(() => {});
                       }
@@ -568,27 +540,6 @@ TỔNG CỘNG: ${formatPrice(detail.invoice.totalAmount)} VNĐ
                   </Select>
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={8} md={6}>
-                <Form.Item
-                  name="quantity"
-                  style={{ marginBottom: 0 }}
-                >
-                  <InputNumber 
-                    min={1} 
-                    style={{ width: '100%' }} 
-                    size="large" 
-                    placeholder="Số lượng"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && form.getFieldValue('productId')) {
-                        e.preventDefault();
-                        form.validateFields(['productId', 'quantity']).then((values) => {
-                          addItem(values);
-                        }).catch(() => {});
-                      }
-                    }}
-                  />
-                </Form.Item>
-              </Col>
               <Col xs={24} sm={4} md={4}>
                 <Button 
                   type="primary" 
@@ -596,7 +547,7 @@ TỔNG CỘNG: ${formatPrice(detail.invoice.totalAmount)} VNĐ
                   block
                   icon={<PlusOutlined />}
                   onClick={() => {
-                    form.validateFields(['productId', 'quantity']).then((values) => {
+                    form.validateFields(['productId']).then((values) => {
                       addItem(values);
                       // Focus back to select after adding
                       setTimeout(() => {
@@ -624,9 +575,9 @@ TỔNG CỘNG: ${formatPrice(detail.invoice.totalAmount)} VNĐ
                       message.warning('Vui lòng chọn xe trước');
                       return;
                     }
-                    form.validateFields(['productId', 'quantity']).then((values) => {
-                      addItem({ ...values, quantity: 1 });
-                      form.setFieldsValue({ productId: undefined, quantity: 1 });
+                    form.validateFields(['productId']).then((values) => {
+                      addItem(values);
+                      form.setFieldsValue({ productId: undefined });
                     }).catch(() => {});
                   }}
                 >
@@ -635,7 +586,7 @@ TỔNG CỘNG: ${formatPrice(detail.invoice.totalAmount)} VNĐ
               </Col>
             </Row>
             <div style={{ marginTop: 12, fontSize: 12, color: '#999' }}>
-              💡 Mẹo: Nhấn Enter sau khi chọn xe hoặc nhập số lượng để thêm nhanh
+              💡 Mẹo: Nhấn Enter sau khi chọn xe để thêm nhanh
             </div>
           </Card>
 
@@ -657,14 +608,6 @@ TỔNG CỘNG: ${formatPrice(detail.invoice.totalAmount)} VNĐ
           {orderItems.length > 0 && (
             <Card style={{ marginBottom: 16, background: '#e6f7ff' }}>
               <Space direction="vertical" style={{ width: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Tạm tính:</span>
-                  <strong>{formatPrice(subtotal)} VNĐ</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>VAT (10%):</span>
-                  <strong>{formatPrice(vat)} VNĐ</strong>
-                </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #d9d9d9', paddingTop: 8 }}>
                   <span style={{ fontSize: 18, fontWeight: 'bold' }}>TỔNG CỘNG:</span>
                   <span style={{ fontSize: 20, fontWeight: 'bold', color: '#1890ff' }}>
@@ -694,16 +637,6 @@ TỔNG CỘNG: ${formatPrice(detail.invoice.totalAmount)} VNĐ
 
       <Card style={{ marginBottom: 16 }}>
         <Space direction={window.innerWidth < 768 ? 'vertical' : 'horizontal'} size="middle" style={{ width: '100%' }}>
-          {/* <Select
-            value={searchField}
-            onChange={(value) => setSearchField(value)}
-            style={{ minWidth: 160 }}
-            size="large"
-          >
-            <Option value="id">Mã hóa đơn</Option>
-            <Option value="customerName">Tên khách hàng</Option>
-            <Option value="customerPhone">SĐT</Option>
-          </Select> */}
           <Input
             placeholder="Nhập từ khóa tìm kiếm"
             value={searchValue}
@@ -848,14 +781,6 @@ TỔNG CỘNG: ${formatPrice(detail.invoice.totalAmount)} VNĐ
               <Row justify="end">
                 <Col xs={24} md={12}>
                   <div style={{ padding: 16, background: '#fafafa', borderRadius: 8 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <Text>Tạm tính:</Text>
-                      <Text strong>{formatPrice(invoiceSubtotal)} VNĐ</Text>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <Text>VAT (10%):</Text>
-                      <Text strong>{formatPrice(vatAmount)} VNĐ</Text>
-                    </div>
                     <Divider style={{ margin: '8px 0' }} />
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <Text strong style={{ fontSize: 16 }}>TỔNG CỘNG:</Text>

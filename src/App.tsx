@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import CarManagement from './pages/CarManagement';
 import AddCar from './pages/AddCar';
+import EditCar from './pages/EditCar';
 import CarDetail from './pages/CarDetail';
 import OrderManagement from './pages/OrderManagement';
 import CustomerManagement from './pages/CustomerManagement';
@@ -127,7 +128,7 @@ function App() {
           element={
             isAuthenticated ? (
               <Layout onLogout={handleLogout}>
-                <AddCar />
+                <EditCar />
               </Layout>
             ) : (
               <Navigate to="/login" replace />

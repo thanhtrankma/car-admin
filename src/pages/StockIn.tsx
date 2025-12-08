@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Button, Card, Table, Space, Modal, Form, InputNumber, DatePicker, message, Tabs } from 'antd';
+import { Button, Card, Table, Space, Modal, Form, InputNumber, DatePicker, message, Select, Input, Row, Col } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, InboxOutlined } from '@ant-design/icons';
+import { PlusOutlined, InboxOutlined, CloseOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { listProductTypes, listWarehouses, type ProductTypeDto, type WarehouseDto } from '../services/productService';
 import { apiRequest, ApiError } from '../services/apiClient';
@@ -23,7 +23,6 @@ const StockIn = () => {
   const [form] = Form.useForm();
   const [productTypes, setProductTypes] = useState<ProductTypeDto[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>('');
   const [tableLoading, setTableLoading] = useState(false);
   const [pagination, setPagination] = useState({
     current: 1,
@@ -63,9 +62,6 @@ const StockIn = () => {
         setLoading(true);
         const response = await listProductTypes(1, 100);
         setProductTypes(response.data);
-        if (response.data.length > 0) {
-          setActiveTab(response.data[0].id);
-        }
       } catch {
         message.error('Không thể tải danh sách loại sản phẩm');
       } finally {
@@ -78,15 +74,16 @@ const StockIn = () => {
     }
   }, [isModalOpen]);
 
-  const handleSave = async (values: { receiptDate: dayjs.Dayjs; [key: string]: unknown }) => {
+  const handleSave = async (values: { receiptDate: dayjs.Dayjs; vehicles?: Array<{ productTypeId?: string; quantity?: number; cost?: number }> }) => {
     try {
-      const items: WarehouseItem[] = productTypes
-        .map((type) => {
-          const quantity = Number(values[`quantity_${type.id}`]) || 0;
-          const cost = Number(values[`cost_${type.id}`]) || 0;
-          if (quantity > 0 && cost > 0) {
+      const vehicles = values.vehicles || [];
+      const items: WarehouseItem[] = vehicles
+        .map((vehicle) => {
+          const quantity = Number(vehicle.quantity) || 0;
+          const cost = Number(vehicle.cost) || 0;
+          if (vehicle.productTypeId && quantity > 0 && cost > 0) {
             return {
-              productTypeId: type.id,
+              productTypeId: vehicle.productTypeId,
               quantity,
               cost,
             };
@@ -113,9 +110,6 @@ const StockIn = () => {
       message.success('Tạo phiếu nhập kho thành công');
       setIsModalOpen(false);
       form.resetFields();
-      if (productTypes.length > 0) {
-        setActiveTab(productTypes[0].id);
-      }
       fetchWarehouses(pagination.current, pagination.pageSize);
     } catch (error) {
       const errorMessage = error instanceof ApiError ? error.message : 'Có lỗi xảy ra khi tạo phiếu nhập kho';
@@ -190,9 +184,10 @@ const StockIn = () => {
         onCancel={() => {
           setIsModalOpen(false);
           form.resetFields();
-          if (productTypes.length > 0) {
-            setActiveTab(productTypes[0].id);
-          }
+          form.setFieldsValue({
+            receiptDate: dayjs(),
+            vehicles: [{ quantity: 1, cost: 0 }],
+          });
         }}
         footer={null}
         width={window.innerWidth < 768 ? '95%' : 800}
@@ -203,6 +198,7 @@ const StockIn = () => {
           onFinish={handleSave}
           initialValues={{
             receiptDate: dayjs(),
+            vehicles: [{ quantity: 1, cost: 0 }],
           }}
         >
           <Form.Item
@@ -213,76 +209,150 @@ const StockIn = () => {
             <DatePicker style={{ width: '100%' }} size="large" format="DD/MM/YYYY" />
           </Form.Item>
 
+          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
+            <Form.Item style={{ marginBottom: 0 }}>
+              <Button
+                type="default"
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  const vehicles = form.getFieldValue('vehicles') || [];
+                  form.setFieldsValue({
+                    vehicles: [...vehicles, { quantity: 1, cost: 0 }],
+                  });
+                }}
+                style={{ borderColor: '#1890ff', color: '#1890ff', backgroundColor: '#e6f7ff' }}
+              >
+                + Thêm xe
+              </Button>
+            </Form.Item>
+          </div>
+
           {loading ? (
             <div style={{ textAlign: 'center', padding: 40 }}>Đang tải...</div>
-          ) : productTypes.length > 0 ? (
-            <Tabs
-              activeKey={activeTab}
-              onChange={setActiveTab}
-              items={productTypes.map((type) => ({
-                key: type.id,
-                label: type.name,
-                children: (
-                  <div style={{ padding: '16px 0' }}>
-                    <Form.Item
-                      label="Số lượng nhập"
-                      name={`quantity_${type.id}`}
-                      rules={[{ required: false }]}
-                    >
-                      <InputNumber<number>
-                        min={0}
-                        style={{ width: '100%' }}
-                        size="large"
-                        placeholder="Nhập số lượng"
-                      />
-                    </Form.Item>
-
-                    <Form.Item
-                      label="Giá nhập (VNĐ)"
-                      name={`cost_${type.id}`}
-                      rules={[{ required: false }]}
-                    >
-                      <InputNumber<number>
-                        min={0}
-                        formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                        parser={(value) => Number((value || '0').replace(/\$\s?|(,*)/g, '')) || 0}
-                        style={{ width: '100%' }}
-                        size="large"
-                        placeholder="Nhập giá nhập"
-                      />
-                    </Form.Item>
-
-                    <Form.Item shouldUpdate>
-                      {({ getFieldValue }) => {
-                        const quantity = getFieldValue(`quantity_${type.id}`) || 0;
-                        const cost = getFieldValue(`cost_${type.id}`) || 0;
-                        const total = quantity * cost;
-                        return total > 0 ? (
-                          <Card style={{ background: '#e6f7ff', marginTop: 16 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span style={{ fontWeight: 500 }}>Thành tiền:</span>
-                              <span style={{ fontSize: 18, fontWeight: 'bold', color: '#1890ff' }}>
-                                {formatPrice(total)} VNĐ
-                              </span>
-                            </div>
-                          </Card>
-                        ) : null;
-                      }}
-                    </Form.Item>
-                  </div>
-                ),
-              }))}
-            />
           ) : (
-            <div style={{ textAlign: 'center', padding: 40 }}>Không có loại sản phẩm nào</div>
+            <Form.List name="vehicles">
+              {(fields, { remove }) => (
+                <>
+                  {fields.map((field) => (
+                    <Card
+                      key={field.key}
+                      style={{
+                        marginBottom: 16,
+                        border: '1px solid #e8e8e8',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                      }}
+                    >
+                      <div style={{ position: 'relative' }}>
+                        <Button
+                          type="text"
+                          danger
+                          icon={<CloseOutlined />}
+                          onClick={() => remove(field.name)}
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            right: 0,
+                            zIndex: 1,
+                            padding: '4px 8px',
+                          }}
+                        />
+                        <Form.Item
+                          label="Chọn xe"
+                          name={[field.name, 'productTypeId']}
+                          style={{ marginBottom: 16 }}
+                        >
+                          <Select
+                            placeholder="Chọn xe"
+                            size="large"
+                            showSearch
+                            optionFilterProp="children"
+                            filterOption={(input, option) =>
+                              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                            }
+                            options={productTypes.map((type) => ({
+                              value: type.id,
+                              label: type.name,
+                            }))}
+                          />
+                        </Form.Item>
+
+                        <Row gutter={16}>
+                          <Col xs={24} sm={8}>
+                            <Form.Item
+                              label={
+                                <>
+                                  Số lượng <span style={{ color: 'red' }}>*</span>
+                                </>
+                              }
+                              name={[field.name, 'quantity']}
+                              rules={[{ required: true, message: 'Vui lòng nhập số lượng' }]}
+                              style={{ marginBottom: 16 }}
+                            >
+                              <InputNumber<number>
+                                min={0}
+                                style={{ width: '100%' }}
+                                size="large"
+                                placeholder="1"
+                              />
+                            </Form.Item>
+                          </Col>
+                          <Col xs={24} sm={8}>
+                            <Form.Item
+                              label="Giá nhập (VNĐ)"
+                              name={[field.name, 'cost']}
+                              style={{ marginBottom: 16 }}
+                            >
+                              <InputNumber<number>
+                                min={0}
+                                formatter={(value) => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                parser={(value) => Number((value || '0').replace(/\$\s?|(,*)/g, '')) || 0}
+                                style={{ width: '100%' }}
+                                size="large"
+                                placeholder="0"
+                              />
+                            </Form.Item>
+                          </Col>
+                          <Col xs={24} sm={8}>
+                            <Form.Item
+                              label="Thành tiền"
+                              style={{ marginBottom: 16 }}
+                            >
+                              <Form.Item shouldUpdate noStyle>
+                                {({ getFieldValue }) => {
+                                  const quantity = getFieldValue(['vehicles', field.name, 'quantity']) || 0;
+                                  const cost = getFieldValue(['vehicles', field.name, 'cost']) || 0;
+                                  const total = quantity * cost;
+                                  return (
+                                    <Input
+                                      value={`$${formatPrice(total)}`}
+                                      readOnly
+                                      size="large"
+                                      style={{
+                                        backgroundColor: '#f5f5f5',
+                                        cursor: 'not-allowed',
+                                      }}
+                                    />
+                                  );
+                                }}
+                              </Form.Item>
+                            </Form.Item>
+                          </Col>
+                        </Row>
+                      </div>
+                    </Card>
+                  ))}
+                </>
+              )}
+            </Form.List>
           )}
 
           <Form.Item shouldUpdate>
             {({ getFieldValue }) => {
+              const vehicles = getFieldValue('vehicles') || [];
               let totalAmount = 0;
-              productTypes.forEach((type) => {
-                const quantity = getFieldValue(`quantity_${type.id}`) || 0;
-                const cost = getFieldValue(`cost_${type.id}`) || 0;
+              vehicles.forEach((vehicle: { quantity?: number; cost?: number }) => {
+                const quantity = Number(vehicle?.quantity) || 0;
+                const cost = Number(vehicle?.cost) || 0;
                 totalAmount += quantity * cost;
               });
               return totalAmount > 0 ? (
@@ -303,9 +373,10 @@ const StockIn = () => {
               <Button onClick={() => {
                 setIsModalOpen(false);
                 form.resetFields();
-                if (productTypes.length > 0) {
-                  setActiveTab(productTypes[0].id);
-                }
+                form.setFieldsValue({
+                  receiptDate: dayjs(),
+                  vehicles: [{ quantity: 1, cost: 0 }],
+                });
               }}>
                 Hủy
               </Button>
