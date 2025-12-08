@@ -4,6 +4,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, DownloadOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import { listProducts, type ProductDto } from '../services/productService';
 import { listInvoices, createInvoice, getInvoiceById, type InvoiceDto, type InvoiceDetailResponse } from '../services/invoiceService';
+import * as XLSX from 'xlsx-js-style';
 
 const { Option } = Select;
 
@@ -215,37 +216,398 @@ const OrderManagement = () => {
   const handleExport = async (invoice: InvoiceDto) => {
     try {
       const detail = await getInvoiceById(invoice.id);
-      const invoiceText = `
-HÓA ĐƠN BÁN HÀNG
-Mã hóa đơn: ${detail.invoice.invoiceNumber}
-Ngày tạo: ${new Date(detail.invoice.created_at).toLocaleString('vi-VN')}
-
-Khách hàng: ${detail.invoice.customerName}
-SĐT: ${detail.invoice.customerPhone}
-Email: ${detail.invoice.customerEmail || ''}
-Địa chỉ: ${detail.invoice.customerAddress || ''}
-
-Chi tiết:
-${detail.details.map(item => `
-  ${item.productName} (${item.productSku})
-  Số lượng: ${item.quantity} x ${formatPrice(item.productPrice)} = ${formatPrice(item.totalPrice)} VNĐ
-`).join('')}
-
-TỔNG CỘNG: ${formatPrice(detail.invoice.totalAmount)} VNĐ
-      `;
-
-      const blob = new Blob([invoiceText], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `HoaDon_${detail.invoice.invoiceNumber}.txt`;
-      a.click();
-      URL.revokeObjectURL(url);
+      
+      // Tạo workbook mới
+      const wb = XLSX.utils.book_new();
+      
+      // Tạo dữ liệu cho hóa đơn theo đúng form mẫu
+      const invoiceData: (string | number)[][] = [];
+      
+      // Dòng 1: Header với số hóa đơn
+      invoiceData.push(['', '', 'HÓA ĐƠN BÁN HÀNG', '', '', 'Số hóa đơn:', detail.invoice.invoiceNumber]);
+      
+      // Dòng 2: Liên số
+      invoiceData.push(['', '', '', '', '', 'Liên số:', '']);
+      
+      // Dòng 3: Ngày bán
+      const createdDate = new Date(detail.invoice.created_at);
+      const day = createdDate.getDate().toString().padStart(2, '0');
+      const month = (createdDate.getMonth() + 1).toString().padStart(2, '0');
+      const year = createdDate.getFullYear();
+      invoiceData.push(['', '', `Ngày bán: ${day}/${month}/${year}`, '', '', '', '']);
+      
+      // Dòng 4: Đơn vị bán hàng
+      invoiceData.push(['Đơn vị bán hàng:', 'Cửa hàng Honda ủy nhiệm HEAD T&H 14006 (HEAD 14006)', '', '', '', '', '']);
+      
+      // Dòng 5: Địa chỉ
+      invoiceData.push(['Địa chỉ:', 'K1 Thành Công, Ba Đình, Hà Nội', '', '', '', '', '']);
+      
+      // Dòng 6: Điện thoại
+      invoiceData.push(['Điện thoại:', '024.3772.4427', '', '', '', '', '']);
+      
+      // Dòng 7: Họ tên khách hàng và Nhân viên lập hóa đơn
+      invoiceData.push(['Họ tên khách hàng:', detail.invoice.customerName, '', 'Nhân viên lập hóa đơn:', '', '', '']);
+      
+      // Dòng 8: Số tài khoản và Ngày sinh
+      invoiceData.push(['Số tài khoản:', '', '', 'Ngày sinh:', '', '', '']);
+      
+      // Dòng 9: Số điện thoại và Giới tính
+      invoiceData.push(['Số điện thoại:', detail.invoice.customerPhone, '', 'Giới tính:', '', '', '']);
+      
+      // Dòng 10: Địa chỉ
+      invoiceData.push(['Địa chỉ:', detail.invoice.customerAddress || '', '', '', '', '', '']);
+      
+      // Dòng 11: Phương thức thanh toán
+      invoiceData.push(['Phương thức thanh toán:', '', '', '', '', '', '']);
+      
+      // Dòng 12: Dòng trống
+      invoiceData.push(['', '', '', '', '', '', '']);
+      
+      // Dòng 13: Header bảng
+      invoiceData.push(['STT', 'Mã hàng', 'Tên hàng', 'Đơn vị tính', 'Số lượng', 'Đơn giá', 'Thành tiền']);
+      
+      // Dòng 14-24: Dữ liệu sản phẩm (tối đa 11 sản phẩm)
+      const maxRows = 11;
+      for (let i = 0; i < maxRows; i++) {
+        if (i < detail.details.length) {
+          const item = detail.details[i];
+          invoiceData.push([
+            i + 1,
+            item.productSku,
+            item.productName,
+            'Cái',
+            item.quantity,
+            item.productPrice,
+            item.totalPrice
+          ]);
+        } else {
+          invoiceData.push(['', '', '', '', '', '', '']);
+        }
+      }
+      
+      // Dòng 25: Cộng thành tiền
+      invoiceData.push(['Cộng thành tiền:', '', '', '', '', '', detail.invoice.totalAmount]);
+      
+      // Dòng 26: Tổng số tiền
+      invoiceData.push(['Tổng số tiền:', '', '', '', '', '', detail.invoice.totalAmount]);
+      
+      // Dòng 27: Tổng số tiền viết bằng chữ
+      invoiceData.push(['Tổng số tiền viết bằng chữ:', convertNumberToWords(detail.invoice.totalAmount) + ' đồng', '', '', '', '', '']);
+      
+      // Dòng 28-29: Dòng trống
+      invoiceData.push(['', '', '', '', '', '', '']);
+      invoiceData.push(['', '', '', '', '', '', '']);
+      
+      // Dòng 30: Chữ ký
+      invoiceData.push(['', '', 'Người mua hàng', '', '', 'Người bán hàng', '']);
+      
+      // Dòng 31: Ghi chú chữ ký
+      invoiceData.push(['', '', '', '', '', '(Ký, ghi rõ họ tên)', '']);
+      
+      // Dòng 32-39: Dòng trống cho chữ ký
+      for (let i = 0; i < 8; i++) {
+        invoiceData.push(['', '', '', '', '', '', '']);
+      }
+      
+      // Tạo worksheet
+      const ws = XLSX.utils.aoa_to_sheet(invoiceData);
+      
+      // Định dạng cột
+      ws['!cols'] = [
+        { wch: 20 },  // Cột 1
+        { wch: 35 },  // Cột 2
+        { wch: 30 },  // Cột 3
+        { wch: 15 },  // Cột 4
+        { wch: 12 },  // Cột 5
+        { wch: 15 },  // Cột 6
+        { wch: 15 }   // Cột 7
+      ];
+      
+      // Merge cells
+      ws['!merges'] = [
+        { s: { r: 0, c: 2 }, e: { r: 0, c: 4 } }, // HÓA ĐƠN BÁN HÀNG
+        { s: { r: 2, c: 2 }, e: { r: 2, c: 4 } }, // Ngày bán
+        { s: { r: 26, c: 1 }, e: { r: 26, c: 6 } }, // Tổng số tiền viết bằng chữ
+      ];
+      
+      // Merge cells cho các ô thông tin khách hàng và nhân viên để tạo ô nhập liệu dài hơn
+      // Địa chỉ khách hàng (dòng 9)
+      ws['!merges'].push({ s: { r: 9, c: 1 }, e: { r: 9, c: 2 } });
+      // Phương thức thanh toán (dòng 10)
+      ws['!merges'].push({ s: { r: 10, c: 1 }, e: { r: 10, c: 2 } });
+      
+      // Định nghĩa border style
+      const borderStyle = {
+        top: { style: 'thin', color: { rgb: '000000' } },
+        bottom: { style: 'thin', color: { rgb: '000000' } },
+        left: { style: 'thin', color: { rgb: '000000' } },
+        right: { style: 'thin', color: { rgb: '000000' } }
+      };
+      
+      // Hàm helper để thêm border cho cell
+      const addBorder = (row: number, col: number) => {
+        const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+        if (!ws[cellAddress]) {
+          ws[cellAddress] = { v: '', t: 's' };
+        }
+        if (!ws[cellAddress].s) {
+          ws[cellAddress].s = {};
+        }
+        ws[cellAddress].s.border = borderStyle;
+      };
+      
+      // Hàm helper để set style cho cell
+      const setCellStyle = (row: number, col: number, style: { bold?: boolean; fontSize?: number; alignment?: { horizontal?: string; vertical?: string } }) => {
+        const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+        if (!ws[cellAddress]) {
+          ws[cellAddress] = { v: '', t: 's' };
+        }
+        if (!ws[cellAddress].s) {
+          ws[cellAddress].s = {};
+        }
+        if (!ws[cellAddress].s.font) ws[cellAddress].s.font = {};
+        // Luôn set font Times New Roman
+        ws[cellAddress].s.font.name = 'Times New Roman';
+        if (style.bold !== undefined) {
+          ws[cellAddress].s.font.bold = style.bold;
+        }
+        if (style.fontSize !== undefined) {
+          ws[cellAddress].s.font.sz = style.fontSize;
+        }
+        if (style.alignment) {
+          ws[cellAddress].s.alignment = style.alignment;
+        }
+      };
+      
+      // Thêm border cho bảng sản phẩm (dòng 13-24, cột 0-6)
+      for (let row = 12; row <= 23; row++) {
+        for (let col = 0; col <= 6; col++) {
+          addBorder(row, col);
+        }
+      }
+      
+      // Định dạng header chính "HÓA ĐƠN BÁN HÀNG" (dòng 0, cột 2)
+      setCellStyle(0, 2, { bold: true, fontSize: 18, alignment: { horizontal: 'center', vertical: 'center' } });
+      
+      // Định dạng "Số hóa đơn:" và "Liên số:" (in đậm)
+      setCellStyle(0, 5, { bold: true });
+      setCellStyle(1, 5, { bold: true });
+      
+      // Định dạng "Ngày bán:" (in đậm)
+      setCellStyle(2, 2, { bold: true, alignment: { horizontal: 'center' } });
+      
+      // Định dạng các nhãn thông tin (in đậm)
+      // Dòng 4-6: Thông tin đơn vị bán hàng
+      setCellStyle(3, 0, { bold: true }); // "Đơn vị bán hàng:"
+      setCellStyle(4, 0, { bold: true }); // "Địa chỉ:"
+      setCellStyle(5, 0, { bold: true }); // "Điện thoại:"
+      
+      // Dòng 7-11: Thông tin khách hàng và nhân viên
+      setCellStyle(6, 0, { bold: true }); // "Họ tên khách hàng:"
+      setCellStyle(6, 3, { bold: true }); // "Nhân viên lập hóa đơn:"
+      setCellStyle(7, 0, { bold: true }); // "Số tài khoản:"
+      setCellStyle(7, 3, { bold: true }); // "Ngày sinh:"
+      setCellStyle(8, 0, { bold: true }); // "Số điện thoại:"
+      setCellStyle(8, 3, { bold: true }); // "Giới tính:"
+      setCellStyle(9, 0, { bold: true }); // "Địa chỉ:"
+      setCellStyle(10, 0, { bold: true }); // "Phương thức thanh toán:"
+      
+      // Thêm border cho dòng header bảng (dòng 13)
+      for (let col = 0; col <= 6; col++) {
+        addBorder(12, col);
+        const cellAddress = XLSX.utils.encode_cell({ r: 12, c: col });
+        if (ws[cellAddress]) {
+          if (!ws[cellAddress].s) ws[cellAddress].s = {};
+          ws[cellAddress].s.font = { name: 'Times New Roman', bold: true, sz: 11 };
+          ws[cellAddress].s.alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
+        }
+      }
+      
+      // Thêm công thức "7=5x6" vào header "Thành tiềnsssss"
+      const thanhTienHeader = XLSX.utils.encode_cell({ r: 12, c: 6 });
+      if (ws[thanhTienHeader]) {
+        ws[thanhTienHeader].v = 'Thành tiền';
+        if (!ws[thanhTienHeader].s) ws[thanhTienHeader].s = {};
+        ws[thanhTienHeader].s.font = { name: 'Times New Roman', bold: true, sz: 11 };
+        ws[thanhTienHeader].s.alignment = { horizontal: 'center', vertical: 'center', wrapTesxt: true };
+      }
+      
+      // Thêm border cho các dòng tổng tiền (dòng 25-27, cột 0-6)
+      for (let row = 24; row <= 26; row++) {
+        for (let col = 0; col <= 6; col++) {
+          addBorder(row, col);
+        }
+      }
+      
+      // Định dạng các nhãn tổng tiền (in đậm)
+      setCellStyle(24, 0, { bold: true }); // "Cộng thành tiền:"
+      setCellStyle(25, 0, { bold: true, fontSize: 12 }); // "Tổng số tiền:"
+      setCellStyle(26, 0, { bold: true }); // "Tổng số tiền viết bằng chữ:"
+      
+      // Định dạng số tiền tổng (in đậm, căn phải, format số)
+      const congThanhTienAddress = XLSX.utils.encode_cell({ r: 24, c: 6 });
+      if (ws[congThanhTienAddress]) {
+        if (!ws[congThanhTienAddress].s) ws[congThanhTienAddress].s = {};
+        if (!ws[congThanhTienAddress].s.font) ws[congThanhTienAddress].s.font = {};
+        ws[congThanhTienAddress].s.font = { name: 'Times New Roman', bold: true };
+        if (!ws[congThanhTienAddress].s.alignment) ws[congThanhTienAddress].s.alignment = {};
+        ws[congThanhTienAddress].s.alignment.horizontal = 'right';
+        ws[congThanhTienAddress].s.numFmt = '#,##0';
+      }
+      
+      const tongSoTienAddress = XLSX.utils.encode_cell({ r: 25, c: 6 });
+      if (ws[tongSoTienAddress]) {
+        if (!ws[tongSoTienAddress].s) ws[tongSoTienAddress].s = {};
+        if (!ws[tongSoTienAddress].s.font) ws[tongSoTienAddress].s.font = {};
+        ws[tongSoTienAddress].s.font = { name: 'Times New Roman', bold: true, sz: 12 };
+        if (!ws[tongSoTienAddress].s.alignment) ws[tongSoTienAddress].s.alignment = {};
+        ws[tongSoTienAddress].s.alignment.horizontal = 'right';
+        ws[tongSoTienAddress].s.numFmt = '#,##0';
+      }
+      
+      // Định dạng phần "Tổng số tiền viết bằng chữ" - in đậm
+      const totalWordsAddress = XLSX.utils.encode_cell({ r: 26, c: 1 });
+      if (ws[totalWordsAddress]) {
+        if (!ws[totalWordsAddress].s) ws[totalWordsAddress].s = {};
+        ws[totalWordsAddress].s.font = { name: 'Times New Roman', bold: true };
+      }
+      
+      // Căn chỉnh cho các cột trong bảng sản phẩm và set font Times New Roman
+      for (let row = 13; row <= 23; row++) {
+        // STT - căn giữa
+        const sttAddress = XLSX.utils.encode_cell({ r: row, c: 0 });
+        if (ws[sttAddress]) {
+          if (!ws[sttAddress].s) ws[sttAddress].s = {};
+          if (!ws[sttAddress].s.font) ws[sttAddress].s.font = {};
+          ws[sttAddress].s.font.name = 'Times New Roman';
+          if (!ws[sttAddress].s.alignment) ws[sttAddress].s.alignment = {};
+          ws[sttAddress].s.alignment.horizontal = 'center';
+        }
+        
+        // Số lượng - căn giữa
+        const qtyAddress = XLSX.utils.encode_cell({ r: row, c: 4 });
+        if (ws[qtyAddress]) {
+          if (!ws[qtyAddress].s) ws[qtyAddress].s = {};
+          if (!ws[qtyAddress].s.font) ws[qtyAddress].s.font = {};
+          ws[qtyAddress].s.font.name = 'Times New Roman';
+          if (!ws[qtyAddress].s.alignment) ws[qtyAddress].s.alignment = {};
+          ws[qtyAddress].s.alignment.horizontal = 'center';
+        }
+        
+        // Đơn giá và Thành tiền - căn phải, format số
+        [5, 6].forEach(col => {
+          const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+          if (ws[cellAddress] && typeof ws[cellAddress].v === 'number') {
+            if (!ws[cellAddress].s) ws[cellAddress].s = {};
+            if (!ws[cellAddress].s.font) ws[cellAddress].s.font = {};
+            ws[cellAddress].s.font.name = 'Times New Roman';
+            if (!ws[cellAddress].s.alignment) ws[cellAddress].s.alignment = {};
+            ws[cellAddress].s.alignment.horizontal = 'right';
+            // Format số với dấu phẩy ngăn cách hàng nghìn
+            ws[cellAddress].s.numFmt = '#,##0';
+          }
+        });
+        
+        // Các cột khác (Mã hàng, Tên hàng, Đơn vị tính) - set font Times New Roman
+        [1, 2, 3].forEach(col => {
+          const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+          if (ws[cellAddress]) {
+            if (!ws[cellAddress].s) ws[cellAddress].s = {};
+            if (!ws[cellAddress].s.font) ws[cellAddress].s.font = {};
+            ws[cellAddress].s.font.name = 'Times New Roman';
+          }
+        });
+      }
+      
+      // Định dạng phần chữ ký (in đậm)
+      setCellStyle(29, 2, { bold: true, fontSize: 12, alignment: { horizontal: 'center' } }); // "Người mua hàng"
+      setCellStyle(29, 5, { bold: true, fontSize: 12, alignment: { horizontal: 'center' } }); // "Người bán hàng"
+      
+      // Định dạng phần ghi chú chữ ký (không in đậm, chữ nhỏ hơn)
+      const noteAddress = XLSX.utils.encode_cell({ r: 30, c: 5 });
+      if (ws[noteAddress]) {
+        if (!ws[noteAddress].s) ws[noteAddress].s = {};
+        ws[noteAddress].s.font = { name: 'Times New Roman', sz: 10, italic: true };
+        ws[noteAddress].s.alignment = { horizontal: 'center' };
+      }
+      
+      // Set font Times New Roman cho tất cả các cells còn lại trong worksheet
+      const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+      for (let row = 0; row <= range.e.r; row++) {
+        for (let col = 0; col <= range.e.c; col++) {
+          const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+          if (ws[cellAddress]) {
+            if (!ws[cellAddress].s) ws[cellAddress].s = {};
+            if (!ws[cellAddress].s.font) ws[cellAddress].s.font = {};
+            if (!ws[cellAddress].s.font.name) {
+              ws[cellAddress].s.font.name = 'Times New Roman';
+            }
+          }
+        }
+      }
+      
+      // Căn phải cho cột thành tiền trong dòng tổng (đã xử lý ở trên)
+      
+      // Thêm worksheet vào workbook
+      XLSX.utils.book_append_sheet(wb, ws, 'Hóa đơn');
+      
+      // Xuất file
+      XLSX.writeFile(wb, `HoaDon_${detail.invoice.invoiceNumber}.xlsx`);
+      
       message.success('Xuất hóa đơn thành công!');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Không thể xuất hóa đơn';
       message.error(errorMessage);
     }
+  };
+
+  const convertNumberToWords = (num: number): string => {
+    const ones = ['', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+    const tens = ['', 'mười', 'hai mươi', 'ba mươi', 'bốn mươi', 'năm mươi', 'sáu mươi', 'bảy mươi', 'tám mươi', 'chín mươi'];
+    const hundreds = ['', 'một trăm', 'hai trăm', 'ba trăm', 'bốn trăm', 'năm trăm', 'sáu trăm', 'bảy trăm', 'tám trăm', 'chín trăm'];
+    
+    if (num === 0) return 'không';
+    
+    const numStr = Math.floor(num).toString();
+    const parts = [];
+    
+    // Xử lý hàng triệu
+    if (numStr.length > 6) {
+      const millions = parseInt(numStr.slice(0, numStr.length - 6));
+      if (millions > 0) {
+        parts.push(convertNumberToWords(millions) + ' triệu');
+      }
+    }
+    
+    // Xử lý hàng nghìn
+    if (numStr.length > 3) {
+      const thousands = parseInt(numStr.slice(-6, -3) || '0');
+      if (thousands > 0) {
+        parts.push(convertNumberToWords(thousands) + ' nghìn');
+      }
+    }
+    
+    // Xử lý hàng trăm, chục, đơn vị
+    const remainder = parseInt(numStr.slice(-3)) || 0;
+    if (remainder > 0) {
+      const h = Math.floor(remainder / 100);
+      const t = Math.floor((remainder % 100) / 10);
+      const o = remainder % 10;
+      
+      if (h > 0) parts.push(hundreds[h]);
+      if (t > 0) {
+        if (t === 1 && o > 0) {
+          parts.push('mười ' + ones[o]);
+        } else {
+          parts.push(tens[t]);
+          if (o > 0) parts.push(ones[o]);
+        }
+      } else if (o > 0) {
+        parts.push(ones[o]);
+      }
+    }
+    
+    return parts.join(' ');
   };
 
   const handleViewDetail = async (invoice: InvoiceDto) => {
