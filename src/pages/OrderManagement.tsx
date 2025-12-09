@@ -224,7 +224,7 @@ const OrderManagement = () => {
       const invoiceData: (string | number)[][] = [];
       
       // Dòng 1: Header với số hóa đơn
-      invoiceData.push(['', '', 'HÓA ĐƠN BÁN HÀNG', '', '', 'Số hóa đơn:', detail.invoice.invoiceNumber]);
+      invoiceData.push(['', '', 'HÓA ĐƠN BÁN HÀNG', '', '', 'Số hóa đơn:', ]);
       
       // Dòng 2: Liên số
       invoiceData.push(['', '', '', '', '', 'Liên số:', '']);
@@ -335,6 +335,9 @@ const OrderManagement = () => {
       ws['!merges'].push({ s: { r: 9, c: 1 }, e: { r: 9, c: 2 } });
       // Phương thức thanh toán (dòng 10)
       ws['!merges'].push({ s: { r: 10, c: 1 }, e: { r: 10, c: 2 } });
+      // Merge dòng tổng tiền: Cộng thành tiền (r=24) và Tổng số tiền (r=25) cột 0-5
+      ws['!merges'].push({ s: { r: 24, c: 0 }, e: { r: 24, c: 5 } });
+      ws['!merges'].push({ s: { r: 25, c: 0 }, e: { r: 25, c: 5 } });
       
       // Định nghĩa border style
       const borderStyle = {
@@ -379,11 +382,151 @@ const OrderManagement = () => {
         }
       };
       
+      // Thêm border đậm chỉ cho viền ngoài của block đơn vị bán hàng (4A đến 7G = dòng 3-6, cột 0-6)
+      // Viền trên (dòng 3)
+      for (let col = 0; col <= 6; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 3, c: col });
+        if (!ws[cellAddress]) ws[cellAddress] = { v: '', t: 's' };
+        if (!ws[cellAddress].s) ws[cellAddress].s = {};
+        if (!ws[cellAddress].s.border) ws[cellAddress].s.border = {};
+        ws[cellAddress].s.border.top = { style: 'medium', color: { rgb: '000000' } };
+      }
+      // Không thêm viền dưới cho dòng 6 vì đó là ranh giới chung với block dưới
+      // Viền trái (cột 0)
+      for (let row = 3; row <= 6; row++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: row, c: 0 });
+        if (!ws[cellAddress]) ws[cellAddress] = { v: '', t: 's' };
+        if (!ws[cellAddress].s) ws[cellAddress].s = {};
+        if (!ws[cellAddress].s.border) ws[cellAddress].s.border = {};
+        ws[cellAddress].s.border.left = { style: 'medium', color: { rgb: '000000' } };
+      }
+      // Viền phải (cột 6)
+      for (let row = 3; row <= 6; row++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: row, c: 6 });
+        if (!ws[cellAddress]) ws[cellAddress] = { v: '', t: 's' };
+        if (!ws[cellAddress].s) ws[cellAddress].s = {};
+        if (!ws[cellAddress].s.border) ws[cellAddress].s.border = {};
+        ws[cellAddress].s.border.right = { style: 'medium', color: { rgb: '000000' } };
+      }
+      
+      // Thêm border đậm chỉ cho viền ngoài của block thông tin khách hàng (7A đến 11G = dòng 6-10, cột 0-6)
+      // Viền trên (dòng 6) - đã có từ block trên, chỉ cần đảm bảo có border
+      for (let col = 0; col <= 6; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 6, c: col });
+        if (!ws[cellAddress]) ws[cellAddress] = { v: '', t: 's' };
+        if (!ws[cellAddress].s) ws[cellAddress].s = {};
+        if (!ws[cellAddress].s.border) ws[cellAddress].s.border = {};
+        ws[cellAddress].s.border.top = { style: 'medium', color: { rgb: '000000' } };
+      }
+      // Viền dưới (dòng 10)
+      for (let col = 0; col <= 6; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 10, c: col });
+        if (!ws[cellAddress]) ws[cellAddress] = { v: '', t: 's' };
+        if (!ws[cellAddress].s) ws[cellAddress].s = {};
+        if (!ws[cellAddress].s.border) ws[cellAddress].s.border = {};
+        ws[cellAddress].s.border.bottom = { style: 'medium', color: { rgb: '000000' } };
+      }
+      // Viền trái (cột 0)
+      for (let row = 6; row <= 10; row++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: row, c: 0 });
+        if (!ws[cellAddress]) ws[cellAddress] = { v: '', t: 's' };
+        if (!ws[cellAddress].s) ws[cellAddress].s = {};
+        if (!ws[cellAddress].s.border) ws[cellAddress].s.border = {};
+        ws[cellAddress].s.border.left = { style: 'medium', color: { rgb: '000000' } };
+      }
+      // Viền phải (cột 6)
+      for (let row = 6; row <= 10; row++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: row, c: 6 });
+        if (!ws[cellAddress]) ws[cellAddress] = { v: '', t: 's' };
+        if (!ws[cellAddress].s) ws[cellAddress].s = {};
+        if (!ws[cellAddress].s.border) ws[cellAddress].s.border = {};
+        ws[cellAddress].s.border.right = { style: 'medium', color: { rgb: '000000' } };
+      }
+      
+      // Thêm border đậm cho khung ngoài toàn bộ hóa đơn (1A đến 41G = dòng 0-40, cột 0-6)
+      // Viền trên (dòng 0)
+      for (let col = 0; col <= 6; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+        if (!ws[cellAddress]) ws[cellAddress] = { v: '', t: 's' };
+        if (!ws[cellAddress].s) ws[cellAddress].s = {};
+        if (!ws[cellAddress].s.border) ws[cellAddress].s.border = {};
+        ws[cellAddress].s.border.top = { style: 'medium', color: { rgb: '000000' } };
+      }
+      // Viền dưới (dòng 40)
+      for (let col = 0; col <= 6; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 40, c: col });
+        if (!ws[cellAddress]) ws[cellAddress] = { v: '', t: 's' };
+        if (!ws[cellAddress].s) ws[cellAddress].s = {};
+        if (!ws[cellAddress].s.border) ws[cellAddress].s.border = {};
+        ws[cellAddress].s.border.bottom = { style: 'medium', color: { rgb: '000000' } };
+      }
+      // Viền trái (cột 0)
+      for (let row = 0; row <= 40; row++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: row, c: 0 });
+        if (!ws[cellAddress]) ws[cellAddress] = { v: '', t: 's' };
+        if (!ws[cellAddress].s) ws[cellAddress].s = {};
+        if (!ws[cellAddress].s.border) ws[cellAddress].s.border = {};
+        ws[cellAddress].s.border.left = { style: 'medium', color: { rgb: '000000' } };
+      }
+      // Viền phải (cột 6)
+      for (let row = 0; row <= 40; row++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: row, c: 6 });
+        if (!ws[cellAddress]) ws[cellAddress] = { v: '', t: 's' };
+        if (!ws[cellAddress].s) ws[cellAddress].s = {};
+        if (!ws[cellAddress].s.border) ws[cellAddress].s.border = {};
+        ws[cellAddress].s.border.right = { style: 'medium', color: { rgb: '000000' } };
+      }
+
+      // Bổ sung viền phải (cột 6) cho vùng nội dung từ dòng 13 đến 27 (r=12..26)
+      for (let row = 12; row <= 26; row++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: row, c: 6 });
+        if (!ws[cellAddress]) ws[cellAddress] = { v: '', t: 's' };
+        if (!ws[cellAddress].s) ws[cellAddress].s = {};
+        if (!ws[cellAddress].s.border) ws[cellAddress].s.border = {};
+        ws[cellAddress].s.border.right = { style: 'medium', color: { rgb: '000000' } };
+      }
+
+      // Đảm bảo viền phải cho cột G ở khu vực bảng và tổng cộng (ghi đè nếu bị mất do merge/styling khác)
+      const enforceRightBorderRows = [...Array(27 - 12 + 1).keys()].map(i => 12 + i); // 12..26
+      enforceRightBorderRows.forEach((r) => {
+        const addr = XLSX.utils.encode_cell({ r, c: 6 });
+        if (!ws[addr]) ws[addr] = { v: '', t: 's' };
+        if (!ws[addr].s) ws[addr].s = {};
+        if (!ws[addr].s.border) ws[addr].s.border = {};
+        ws[addr].s.border.right = { style: 'medium', color: { rgb: '000000' } };
+      });
+
+      // Bổ sung viền bottom cho dòng 39 (1-based) → r = 38
+      for (let col = 0; col <= 6; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 38, c: col });
+        if (!ws[cellAddress]) ws[cellAddress] = { v: '', t: 's' };
+        if (!ws[cellAddress].s) ws[cellAddress].s = {};
+        if (!ws[cellAddress].s.border) ws[cellAddress].s.border = {};
+        ws[cellAddress].s.border.bottom = { style: 'medium', color: { rgb: '000000' } };
+      }
+
       // Thêm border cho bảng sản phẩm (dòng 13-24, cột 0-6)
+      // Chỉ thêm border top, bottom, left cho các cột 0-5
+      // Cột 6 (G) sẽ có border right đậm riêng
       for (let row = 12; row <= 23; row++) {
-        for (let col = 0; col <= 6; col++) {
-          addBorder(row, col);
+        for (let col = 0; col <= 5; col++) {
+          const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+          if (!ws[cellAddress]) ws[cellAddress] = { v: '', t: 's' };
+          if (!ws[cellAddress].s) ws[cellAddress].s = {};
+          if (!ws[cellAddress].s.border) ws[cellAddress].s.border = {};
+          // Chỉ thêm top, bottom, left, không có right
+          ws[cellAddress].s.border.top = { style: 'thin', color: { rgb: '000000' } };
+          ws[cellAddress].s.border.bottom = { style: 'thin', color: { rgb: '000000' } };
+          ws[cellAddress].s.border.left = { style: 'thin', color: { rgb: '000000' } };
         }
+        // Cột 6 (G) - thêm tất cả border trừ right (right sẽ được set đậm sau)
+        const cellAddressG = XLSX.utils.encode_cell({ r: row, c: 6 });
+        if (!ws[cellAddressG]) ws[cellAddressG] = { v: '', t: 's' };
+        if (!ws[cellAddressG].s) ws[cellAddressG].s = {};
+        if (!ws[cellAddressG].s.border) ws[cellAddressG].s.border = {};
+        ws[cellAddressG].s.border.top = { style: 'thin', color: { rgb: '000000' } };
+        ws[cellAddressG].s.border.bottom = { style: 'thin', color: { rgb: '000000' } };
+        ws[cellAddressG].s.border.left = { style: 'thin', color: { rgb: '000000' } };
       }
       
       // Định dạng header chính "HÓA ĐƠN BÁN HÀNG" (dòng 0, cột 2)
@@ -465,11 +608,35 @@ const OrderManagement = () => {
         ws[tongSoTienAddress].s.numFmt = '#,##0';
       }
       
-      // Định dạng phần "Tổng số tiền viết bằng chữ" - in đậm
+      // Định dạng phần "Tổng số tiền viết bằng chữ" - in đậm và căn giữa
+      const totalWordsLabel = XLSX.utils.encode_cell({ r: 26, c: 0 });
+      if (ws[totalWordsLabel]) {
+        if (!ws[totalWordsLabel].s) ws[totalWordsLabel].s = {};
+        if (!ws[totalWordsLabel].s.font) ws[totalWordsLabel].s.font = {};
+        ws[totalWordsLabel].s.font = { name: 'Times New Roman', bold: true };
+        ws[totalWordsLabel].s.alignment = { horizontal: 'center', vertical: 'center' };
+      }
       const totalWordsAddress = XLSX.utils.encode_cell({ r: 26, c: 1 });
       if (ws[totalWordsAddress]) {
         if (!ws[totalWordsAddress].s) ws[totalWordsAddress].s = {};
         ws[totalWordsAddress].s.font = { name: 'Times New Roman', bold: true };
+      }
+
+      // Căn giữa nhãn "Cộng thành tiền" và "Tổng số tiền" sau khi merge cột 0-5
+      const congThanhTienLabel = XLSX.utils.encode_cell({ r: 24, c: 0 });
+      if (ws[congThanhTienLabel]) {
+        if (!ws[congThanhTienLabel].s) ws[congThanhTienLabel].s = {};
+        if (!ws[congThanhTienLabel].s.font) ws[congThanhTienLabel].s.font = {};
+        ws[congThanhTienLabel].s.font = { ...ws[congThanhTienLabel].s.font, name: 'Times New Roman', bold: true };
+        ws[congThanhTienLabel].s.alignment = { horizontal: 'center', vertical: 'center' };
+      }
+
+      const tongSoTienLabel = XLSX.utils.encode_cell({ r: 25, c: 0 });
+      if (ws[tongSoTienLabel]) {
+        if (!ws[tongSoTienLabel].s) ws[tongSoTienLabel].s = {};
+        if (!ws[tongSoTienLabel].s.font) ws[tongSoTienLabel].s.font = {};
+        ws[tongSoTienLabel].s.font = { ...ws[tongSoTienLabel].s.font, name: 'Times New Roman', bold: true, sz: 12 };
+        ws[tongSoTienLabel].s.alignment = { horizontal: 'center', vertical: 'center' };
       }
       
       // Căn chỉnh cho các cột trong bảng sản phẩm và set font Times New Roman
@@ -547,6 +714,16 @@ const OrderManagement = () => {
       }
       
       // Căn phải cho cột thành tiền trong dòng tổng (đã xử lý ở trên)
+      
+      // Đảm bảo border right đậm cho cột G từ dòng 13-27 (sau cùng để không bị ghi đè bởi addBorder)
+      for (let row = 12; row <= 26; row++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: row, c: 6 });
+        if (!ws[cellAddress]) ws[cellAddress] = { v: '', t: 's' };
+        if (!ws[cellAddress].s) ws[cellAddress].s = {};
+        if (!ws[cellAddress].s.border) ws[cellAddress].s.border = {};
+        // Ghi đè border right thành medium, giữ nguyên các border khác
+        ws[cellAddress].s.border.right = { style: 'medium', color: { rgb: '000000' } };
+      }
       
       // Thêm worksheet vào workbook
       XLSX.utils.book_append_sheet(wb, ws, 'Hóa đơn');
