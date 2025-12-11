@@ -1235,9 +1235,10 @@ const OrderManagement = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <div>
                   <Title level={4} style={{ marginBottom: 0 }}>
-                    Honda Dealership
+                    Honda Head T&H
                   </Title>
-                  <Text>123 Nguyễn Văn Linh, TP.HCM</Text>
+                  <Text>Số 10 Láng Hạ, Giảng Võ, Hà Nội 
+                  </Text>
                   <br />
                   <Text>Hotline: 1900 1234</Text>
                 </div>

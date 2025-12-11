@@ -169,10 +169,10 @@ const Layout = ({ children, onLogout }: LayoutProps) => {
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}>
-                CarDealer Admin
+                Honda Head T&H
               </h1>
               <p style={{ fontSize: 12, color: '#999', margin: '4px 0 0 0' }}>
-                Quản lý hệ thống
+                Quản lý bán hàng
               </p>
             </>
           )}
@@ -207,10 +207,10 @@ const Layout = ({ children, onLogout }: LayoutProps) => {
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>
-              CarDealer Admin
+              Honda Head T&H
             </h1>
             <p style={{ fontSize: 12, color: '#999', margin: '4px 0 0 0' }}>
-              Quản lý hệ thống
+              Quản lý bán hàng
             </p>
           </div>
         }

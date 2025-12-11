@@ -127,9 +127,9 @@ const Dashboard = () => {
         />
       )}
 
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }} align="stretch">
         <Col xs={24} sm={12} lg={6}>
-          <Card hoverable>
+          <Card hoverable style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Statistic
               title={timeRange === 'month' ? 'Doanh số tháng này' : 'Doanh số năm này'}
               value={timeRange === 'month' ? '2.800' : '28.500'}
@@ -143,21 +143,23 @@ const Dashboard = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card hoverable>
+          <Card hoverable style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Statistic
-              title="Doanh số năm"
-              value="28.500"
+              title={timeRange === 'month' ? 'Doanh số năm' : 'Doanh số năm trước'}
+              value={timeRange === 'month' ? '28.500' : '24.700'}
               suffix="M"
               prefix={<DollarOutlined />}
               valueStyle={{ color: '#52c41a' }}
             />
-            <div style={{ marginTop: 8, color: '#52c41a', fontSize: 12 }}>
-              <ArrowUpOutlined /> +12.5% so với năm trước
-            </div>
+            {timeRange === 'month' && (
+              <div style={{ marginTop: 8, color: '#52c41a', fontSize: 12 }}>
+                <ArrowUpOutlined /> +12.5% so với năm trước
+              </div>
+            )}
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card hoverable>
+          <Card hoverable style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Statistic
               title="Số lượng xe bán ra"
               value={168}
@@ -170,12 +172,12 @@ const Dashboard = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card hoverable>
+          <Card hoverable style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Statistic
               title="Xe bán chạy nhất"
               value="Honda Vision 2025"
               prefix={<TrophyOutlined />}
-              valueStyle={{ fontSize: 16 }}
+              valueStyle={{ fontSize: 16, wordBreak: 'break-word' }}
             />
             <div style={{ marginTop: 8, color: '#1890ff', fontSize: 12 }}>
               <ShoppingCartOutlined /> 45 đơn đã bán

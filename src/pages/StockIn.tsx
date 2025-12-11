@@ -222,7 +222,7 @@ const StockIn = () => {
                 }}
                 style={{ borderColor: '#1890ff', color: '#1890ff', backgroundColor: '#e6f7ff' }}
               >
-                + Thêm xe
+                Thêm xe
               </Button>
             </Form.Item>
           </div>
@@ -279,11 +279,7 @@ const StockIn = () => {
                         <Row gutter={16}>
                           <Col xs={24} sm={8}>
                             <Form.Item
-                              label={
-                                <>
-                                  Số lượng <span style={{ color: 'red' }}>*</span>
-                                </>
-                              }
+                              label="Số lượng"
                               name={[field.name, 'quantity']}
                               rules={[{ required: true, message: 'Vui lòng nhập số lượng' }]}
                               style={{ marginBottom: 16 }}
@@ -304,8 +300,8 @@ const StockIn = () => {
                             >
                               <InputNumber<number>
                                 min={0}
-                                formatter={(value) => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                                parser={(value) => Number((value || '0').replace(/\$\s?|(,*)/g, '')) || 0}
+                                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                parser={(value) => Number((value || '0').replace(/,/g, '')) || 0}
                                 style={{ width: '100%' }}
                                 size="large"
                                 placeholder="0"
@@ -324,7 +320,7 @@ const StockIn = () => {
                                   const total = quantity * cost;
                                   return (
                                     <Input
-                                      value={`$${formatPrice(total)}`}
+                                      value={`${formatPrice(total)} VNĐ`}
                                       readOnly
                                       size="large"
                                       style={{

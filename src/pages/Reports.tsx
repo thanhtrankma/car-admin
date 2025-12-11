@@ -157,9 +157,9 @@ const Reports = () => {
             </Radio.Group>
           </Card>
 
-          <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+          <Row gutter={[16, 16]} style={{ marginBottom: 24 }} align="stretch">
             <Col xs={24} sm={12} lg={6}>
-              <Card>
+              <Card style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <Statistic
                   title="Tổng doanh thu"
                   value={totalRevenue}
@@ -175,7 +175,7 @@ const Reports = () => {
               </Card>
             </Col>
             <Col xs={24} sm={12} lg={6}>
-              <Card>
+              <Card style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <Statistic
                   title="Số lượng xe bán ra"
                   value={totalCarsSold}
@@ -190,22 +190,22 @@ const Reports = () => {
               </Card>
             </Col>
             <Col xs={24} sm={12} lg={6}>
-              <Card>
+              <Card style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <Statistic
                   title="Xe bán chạy nhất"
-                  value={topSellingCars[0]?.name}
+                  value={topSellingCars[0]?.name || '-'}
                   prefix={<ShoppingCartOutlined />}
                   suffix={
-                    <span style={{ fontSize: 12 }}>
-                      {topSellingCars[0]?.sales} đơn
+                    <span style={{ fontSize: 14, color: '#1890ff' }}>
+                      {topSellingCars[0]?.sales || 0} đơn
                     </span>
                   }
-                  valueStyle={{ fontSize: 16 }}
+                  valueStyle={{ fontSize: 18, wordBreak: 'break-word', color: '#1890ff' }}
                 />
               </Card>
             </Col>
             <Col xs={24} sm={12} lg={6}>
-              <Card>
+              <Card style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <Statistic
                   title={`Doanh thu TB/${timeRange === 'month' ? 'tháng' : 'ngày'}`}
                   value={totalRevenue / normalizedRevenueData.length}
