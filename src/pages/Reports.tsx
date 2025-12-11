@@ -1,13 +1,19 @@
-import { useState } from 'react';
-import { Card, Space, Table, Row, Col, Statistic, Progress, Tag, Radio } from 'antd';
-import { DollarOutlined, CarOutlined, ShoppingCartOutlined, CalendarOutlined, ArrowUpOutlined } from '@ant-design/icons';
+import { useState } from 'react'
+import { Card, Space, Table, Row, Col, Statistic, Progress, Tag, Radio } from 'antd'
+import {
+  DollarOutlined,
+  CarOutlined,
+  ShoppingCartOutlined,
+  CalendarOutlined,
+  ArrowUpOutlined,
+} from '@ant-design/icons'
 
 const Reports = () => {
-  const [reportType, setReportType] = useState<'sales' | 'inventory'>('sales');
-  const [timeRange, setTimeRange] = useState<'day' | 'month'>('month');
+  const [reportType, setReportType] = useState<'sales' | 'inventory'>('sales')
+  const [timeRange, setTimeRange] = useState<'day' | 'month'>('month')
 
-  type MonthlyRevenue = { month: string; revenue: number };
-  type DailyRevenue = { day: string; revenue: number };
+  type MonthlyRevenue = { month: string; revenue: number }
+  type DailyRevenue = { day: string; revenue: number }
 
   const monthlyRevenue: MonthlyRevenue[] = [
     { month: 'Tháng 1', revenue: 1800000000 },
@@ -16,7 +22,7 @@ const Reports = () => {
     { month: 'Tháng 4', revenue: 2300000000 },
     { month: 'Tháng 5', revenue: 2500000000 },
     { month: 'Tháng 6', revenue: 2800000000 },
-  ];
+  ]
 
   const dailyRevenue: DailyRevenue[] = [
     { day: 'Ngày 1', revenue: 95000000 },
@@ -25,7 +31,7 @@ const Reports = () => {
     { day: 'Ngày 4', revenue: 110000000 },
     { day: 'Ngày 5', revenue: 130000000 },
     { day: 'Ngày 6', revenue: 105000000 },
-  ];
+  ]
 
   const topSellingCars = [
     { name: 'Honda Vision 2025', sales: 45, revenue: 1462050000 },
@@ -33,7 +39,7 @@ const Reports = () => {
     { name: 'Air Blade', sales: 32, revenue: 1446080000 },
     { name: 'Wave Alpha 110', sales: 28, revenue: 542640000 },
     { name: 'Winner X', sales: 25, revenue: 1205250000 },
-  ];
+  ]
 
   const inventoryData = [
     { code: 'H001', name: 'Wave Alpha', type: 'Xe số', quantity: 10, status: 'Còn hàng' },
@@ -43,21 +49,21 @@ const Reports = () => {
     { code: 'H005', name: 'Winner X', type: 'Xe côn tay', quantity: 0, status: 'Hết hàng' },
     { code: 'H006', name: 'Lead', type: 'Xe tay ga', quantity: 2, status: 'Còn hàng' },
     { code: 'H007', name: 'SH 150i', type: 'Xe tay ga', quantity: 1, status: 'Còn hàng' },
-  ];
+  ]
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('vi-VN').format(price);
-  };
+    return new Intl.NumberFormat('vi-VN').format(price)
+  }
 
-  const revenueDataset = timeRange === 'month' ? monthlyRevenue : dailyRevenue;
-  const normalizedRevenueData = revenueDataset.map((item) =>
+  const revenueDataset = timeRange === 'month' ? monthlyRevenue : dailyRevenue
+  const normalizedRevenueData = revenueDataset.map(item =>
     'month' in item
       ? { label: item.month, revenue: item.revenue }
       : { label: item.day, revenue: item.revenue }
-  );
-  const maxRevenue = Math.max(...normalizedRevenueData.map((r) => r.revenue));
-  const totalRevenue = normalizedRevenueData.reduce((sum, r) => sum + r.revenue, 0);
-  const totalCarsSold = topSellingCars.reduce((sum, car) => sum + car.sales, 0);
+  )
+  const maxRevenue = Math.max(...normalizedRevenueData.map(r => r.revenue))
+  const totalRevenue = normalizedRevenueData.reduce((sum, r) => sum + r.revenue, 0)
+  const totalCarsSold = topSellingCars.reduce((sum, car) => sum + car.sales, 0)
 
   const salesColumns = [
     {
@@ -84,7 +90,7 @@ const Reports = () => {
       key: 'revenue',
       render: (revenue: number) => formatPrice(revenue) + ' VNĐ',
     },
-  ];
+  ]
 
   const inventoryColumns = [
     {
@@ -112,30 +118,38 @@ const Reports = () => {
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => (
-        <Tag color={status === 'Còn hàng' ? 'green' : 'red'}>
-          {status}
-        </Tag>
+        <Tag color={status === 'Còn hàng' ? 'green' : 'red'}>{status}</Tag>
       ),
     },
-  ];
+  ]
 
   return (
     <div>
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: window.innerWidth < 768 ? 'column' : 'row',
-        justifyContent: 'space-between', 
-        alignItems: window.innerWidth < 768 ? 'flex-start' : 'center', 
-        marginBottom: 24,
-        gap: window.innerWidth < 768 ? 16 : 0,
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+          justifyContent: 'space-between',
+          alignItems: window.innerWidth < 768 ? 'flex-start' : 'center',
+          marginBottom: 24,
+          gap: window.innerWidth < 768 ? 16 : 0,
+        }}
+      >
         <div>
-          <h1 style={{ fontSize: window.innerWidth < 576 ? 20 : 24, fontWeight: 'bold', marginBottom: 8 }}>Báo cáo</h1>
+          <h1
+            style={{
+              fontSize: window.innerWidth < 576 ? 20 : 24,
+              fontWeight: 'bold',
+              marginBottom: 8,
+            }}
+          >
+            Báo cáo
+          </h1>
           <p style={{ color: '#666', fontSize: 14 }}>Xem báo cáo doanh số và tồn kho</p>
         </div>
         <Radio.Group
           value={reportType}
-          onChange={(e) => setReportType(e.target.value)}
+          onChange={e => setReportType(e.target.value)}
           buttonStyle="solid"
           size={window.innerWidth < 576 ? 'small' : 'middle'}
         >
@@ -149,7 +163,7 @@ const Reports = () => {
           <Card style={{ marginBottom: 16 }}>
             <Radio.Group
               value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value)}
+              onChange={e => setTimeRange(e.target.value)}
               buttonStyle="solid"
             >
               <Radio.Button value="day">Theo ngày</Radio.Button>
@@ -163,7 +177,7 @@ const Reports = () => {
                 <Statistic
                   title="Tổng doanh thu"
                   value={totalRevenue}
-                  formatter={(value) => formatPrice(Number(value)) + ' VNĐ'}
+                  formatter={value => formatPrice(Number(value)) + ' VNĐ'}
                   prefix={<DollarOutlined />}
                   suffix={
                     <span style={{ color: '#52c41a', fontSize: 12 }}>
@@ -209,7 +223,7 @@ const Reports = () => {
                 <Statistic
                   title={`Doanh thu TB/${timeRange === 'month' ? 'tháng' : 'ngày'}`}
                   value={totalRevenue / normalizedRevenueData.length}
-                  formatter={(value) => formatPrice(Number(value)) + ' VNĐ'}
+                  formatter={value => formatPrice(Number(value)) + ' VNĐ'}
                   prefix={<CalendarOutlined />}
                   suffix={
                     <span style={{ color: '#52c41a', fontSize: 12 }}>
@@ -229,7 +243,9 @@ const Reports = () => {
             <Space direction="vertical" style={{ width: '100%' }} size="large">
               {normalizedRevenueData.map((item, index) => (
                 <div key={index}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <div
+                    style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}
+                  >
                     <span style={{ fontWeight: 500 }}>{item.label}</span>
                     <span style={{ fontWeight: 'bold' }}>{formatPrice(item.revenue)} VNĐ</span>
                   </div>
@@ -305,7 +321,7 @@ const Reports = () => {
         </Card>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default Reports;
+export default Reports

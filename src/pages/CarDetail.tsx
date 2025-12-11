@@ -1,66 +1,78 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
-import { Card, Button, Space, Row, Col, Descriptions, Tag, Image, Spin, message, Carousel } from 'antd';
-import { getProductById, type ProductDto } from '../services/productService';
+import { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
+import {
+  Card,
+  Button,
+  Space,
+  Row,
+  Col,
+  Descriptions,
+  Tag,
+  Image,
+  Spin,
+  message,
+  Carousel,
+} from 'antd'
+import { getProductById, type ProductDto } from '../services/productService'
 
 const VEHICLE_TYPE_LABELS: Record<number, string> = {
   1: 'Xe tay ga',
   2: 'Xe số',
   3: 'Xe côn tay',
-};
+}
 
 const WAREHOUSE_STATUS_META: Record<number, { label: string; color: string }> = {
   1: { label: 'Còn hàng', color: 'green' },
   2: { label: 'Hết hàng', color: 'red' },
   3: { label: 'Sắp về', color: 'blue' },
   4: { label: 'Đang bảo hành', color: 'orange' },
-};
+}
 
 const formatImageUrl = (url: string) => {
-  if (!url) return '';
-  if (/^https?:\/\//i.test(url)) return url;
-  return `http://${url}`;
-};
+  if (!url) return ''
+  if (/^https?:\/\//i.test(url)) return url
+  return `http://${url}`
+}
 
 const CarDetail = () => {
-  const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const [loading, setLoading] = useState(true);
-  const [car, setCar] = useState<ProductDto | null>(null);
+  const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>()
+  const [loading, setLoading] = useState(true)
+  const [car, setCar] = useState<ProductDto | null>(null)
 
   useEffect(() => {
     const fetchCarDetail = async () => {
-      setLoading(true);
+      setLoading(true)
       try {
         if (!id) {
-          navigate('/cars');
-          return;
+          navigate('/cars')
+          return
         }
-        const product = await getProductById(id);
-        setCar(product);
+        const product = await getProductById(id)
+        setCar(product)
       } catch {
-        message.error('Không thể tải thông tin xe');
-        navigate('/cars');
+        message.error('Không thể tải thông tin xe')
+        navigate('/cars')
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
     if (id) {
-      fetchCarDetail();
+      fetchCarDetail()
     } else {
-      navigate('/cars');
+      navigate('/cars')
     }
-  }, [id, navigate]);
+  }, [id, navigate])
 
   const formatPrice = (price?: number) => {
-    if (!price) return 'N/A';
-    return new Intl.NumberFormat('vi-VN').format(price) + ' VNĐ';
-  };
+    if (!price) return 'N/A'
+    return new Intl.NumberFormat('vi-VN').format(price) + ' VNĐ'
+  }
 
   const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return 'N/A'
     try {
       return new Date(dateString).toLocaleString('vi-VN', {
         year: 'numeric',
@@ -68,49 +80,50 @@ const CarDetail = () => {
         day: '2-digit',
         hour: '2-digit',
         minute: '2-digit',
-      });
+      })
     } catch {
-      return dateString;
+      return dateString
     }
-  };
+  }
 
   const getVehicleTypeLabel = (value?: number) => {
-    if (!value) return 'N/A';
-    return VEHICLE_TYPE_LABELS[value] ?? `Loại ${value}`;
-  };
+    if (!value) return 'N/A'
+    return VEHICLE_TYPE_LABELS[value] ?? `Loại ${value}`
+  }
 
   const getWarehouseStatusMeta = (value?: number) => {
-    if (!value) return undefined;
-    return WAREHOUSE_STATUS_META[value];
-  };
+    if (!value) return undefined
+    return WAREHOUSE_STATUS_META[value]
+  }
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '400px',
+        }}
+      >
         <Spin size="large" />
       </div>
-    );
+    )
   }
 
   if (!car) {
-    return null;
+    return null
   }
 
   return (
     <div>
       <Space style={{ marginBottom: 24, width: '100%', justifyContent: 'space-between' }} wrap>
         <Space align="center">
-          <Button
-            icon={<ArrowLeft />}
-            onClick={() => navigate('/cars')}
-            type="text"
-          />
+          <Button icon={<ArrowLeft />} onClick={() => navigate('/cars')} type="text" />
           <h1 style={{ fontSize: 24, fontWeight: 'bold', margin: 0 }}>Chi tiết xe</h1>
         </Space>
         <Space>
-          <Button onClick={() => navigate('/cars')}>
-            Quay lại
-          </Button>
+          <Button onClick={() => navigate('/cars')}>Quay lại</Button>
           <Button type="primary" onClick={() => navigate(`/cars/${id}/edit`)}>
             Chỉnh sửa
           </Button>
@@ -134,15 +147,9 @@ const CarDetail = () => {
                 {getVehicleTypeLabel(car.vehicleType)}
               </Descriptions.Item>
               <Descriptions.Item label="Phiên bản">{car.version || 'N/A'}</Descriptions.Item>
-              <Descriptions.Item label="Dòng">
-                {car.line || 'N/A'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Trọng lượng">
-                {car.weight || 'N/A'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Dung tích">
-                {car.cc || 'N/A'}
-              </Descriptions.Item>
+              <Descriptions.Item label="Dòng">{car.line || 'N/A'}</Descriptions.Item>
+              <Descriptions.Item label="Trọng lượng">{car.weight || 'N/A'}</Descriptions.Item>
+              <Descriptions.Item label="Dung tích">{car.cc || 'N/A'}</Descriptions.Item>
               <Descriptions.Item label="Năm sản xuất">
                 {car.manufacturedDate || 'N/A'}
               </Descriptions.Item>
@@ -152,12 +159,8 @@ const CarDetail = () => {
 
           <Card title="Thông tin kỹ thuật" style={{ marginBottom: 24 }}>
             <Descriptions column={1} bordered>
-              <Descriptions.Item label="Số khung">
-                {car.chassisNumber || 'N/A'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Số máy">
-                {car.engineNumber || 'N/A'}
-              </Descriptions.Item>
+              <Descriptions.Item label="Số khung">{car.chassisNumber || 'N/A'}</Descriptions.Item>
+              <Descriptions.Item label="Số máy">{car.engineNumber || 'N/A'}</Descriptions.Item>
             </Descriptions>
           </Card>
 
@@ -175,9 +178,7 @@ const CarDetail = () => {
                 <strong style={{ color: '#1890ff' }}>{formatPrice(car.cost)}</strong>
               </Descriptions.Item>
               <Descriptions.Item label="Giá bán">
-                <strong style={{ color: '#52c41a', fontSize: 18 }}>
-                  {formatPrice(car.price)}
-                </strong>
+                <strong style={{ color: '#52c41a', fontSize: 18 }}>{formatPrice(car.price)}</strong>
               </Descriptions.Item>
             </Descriptions>
           </Card>
@@ -187,10 +188,14 @@ const CarDetail = () => {
               <Descriptions.Item label="Người tạo">
                 {car.createdBy ? (
                   <div>
-                    <div><strong>{car.createdBy.username}</strong></div>
+                    <div>
+                      <strong>{car.createdBy.username}</strong>
+                    </div>
                     <div style={{ fontSize: 12, color: '#666' }}>{car.createdBy.email}</div>
                   </div>
-                ) : 'N/A'}
+                ) : (
+                  'N/A'
+                )}
               </Descriptions.Item>
               <Descriptions.Item label="Thời gian tạo">
                 {formatDate(car.created_at)}
@@ -198,10 +203,14 @@ const CarDetail = () => {
               <Descriptions.Item label="Người cập nhật">
                 {car.updatedBy ? (
                   <div>
-                    <div><strong>{car.updatedBy.username}</strong></div>
+                    <div>
+                      <strong>{car.updatedBy.username}</strong>
+                    </div>
                     <div style={{ fontSize: 12, color: '#666' }}>{car.updatedBy.email}</div>
                   </div>
-                ) : 'N/A'}
+                ) : (
+                  'N/A'
+                )}
               </Descriptions.Item>
               <Descriptions.Item label="Thời gian cập nhật">
                 {formatDate(car.updated_at)}
@@ -214,24 +223,19 @@ const CarDetail = () => {
           <Card title="Hình ảnh" style={{ marginBottom: 24 }}>
             {car.images && car.images.length > 0 ? (
               <Image.PreviewGroup>
-                <Carousel
-                  autoplay
-                  dots
-                  infinite
-                  style={{ width: '100%' }}
-                >
+                <Carousel autoplay dots infinite style={{ width: '100%' }}>
                   {car.images.map((img, index) => (
                     <div key={index}>
                       <Image
                         src={formatImageUrl(img)}
                         alt={`${car.name} - ${index + 1}`}
-                        style={{ 
-                          width: '100%', 
+                        style={{
+                          width: '100%',
                           height: 'auto',
                           maxHeight: '400px',
                           objectFit: 'contain',
                           borderRadius: 8,
-                          display: 'block'
+                          display: 'block',
                         }}
                         preview={{
                           mask: 'Xem ảnh',
@@ -250,8 +254,7 @@ const CarDetail = () => {
         </Col>
       </Row>
     </div>
-  );
-};
+  )
+}
 
-export default CarDetail;
-
+export default CarDetail

@@ -1,65 +1,75 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, Row, Col, Statistic, Radio, Table, Button, Alert, Space, Tag } from 'antd';
-import { DollarOutlined, CarOutlined, TrophyOutlined, ShoppingCartOutlined, ArrowUpOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import { getProductRemainState, listProductRemain } from '../services/productService';
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Card, Row, Col, Statistic, Radio, Table, Button, Alert, Space, Tag } from 'antd'
+import {
+  DollarOutlined,
+  CarOutlined,
+  TrophyOutlined,
+  ShoppingCartOutlined,
+  ArrowUpOutlined,
+  ExclamationCircleOutlined,
+} from '@ant-design/icons'
+import { getProductRemainState, listProductRemain } from '../services/productService'
 
 const Dashboard = () => {
-  const navigate = useNavigate();
-  const [timeRange, setTimeRange] = useState<'month' | 'year'>('month');
-  const [isMobile, setIsMobile] = useState(false);
-  const [totalRemain, setTotalRemain] = useState(0);
-  const [pendingList, setPendingList] = useState<Array<{ name: string; remain: number }>>([]);
-  const [loadingRemain, setLoadingRemain] = useState(false);
+  const navigate = useNavigate()
+  const [timeRange, setTimeRange] = useState<'month' | 'year'>('month')
+  const [isMobile, setIsMobile] = useState(false)
+  const [totalRemain, setTotalRemain] = useState(0)
+  const [pendingList, setPendingList] = useState<Array<{ name: string; remain: number }>>([])
+  const [loadingRemain, setLoadingRemain] = useState(false)
 
   useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 576);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+    const checkMobile = () => setIsMobile(window.innerWidth < 576)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   const fetchRemainState = useCallback(async () => {
-    setLoadingRemain(true);
+    setLoadingRemain(true)
     try {
-      const response = await getProductRemainState();
-      setTotalRemain(response.data.totalRemain);
-      
+      const response = await getProductRemainState()
+      setTotalRemain(response.data.totalRemain)
+
       if (response.data.totalRemain > 0) {
         const remainList = await listProductRemain({
           page: 1,
           limit: 100,
           sortBy: 'created_at',
           sortOrder: 'desc',
-        });
-        
+        })
+
         // Group by name and sum remain
-        const grouped = remainList.data.reduce((acc, item) => {
-          const existing = acc.find(g => g.name === item.name);
-          if (existing) {
-            existing.remain += item.remain;
-          } else {
-            acc.push({ name: item.name, remain: item.remain });
-          }
-          return acc;
-        }, [] as Array<{ name: string; remain: number }>);
-        
-        setPendingList(grouped);
+        const grouped = remainList.data.reduce(
+          (acc, item) => {
+            const existing = acc.find(g => g.name === item.name)
+            if (existing) {
+              existing.remain += item.remain
+            } else {
+              acc.push({ name: item.name, remain: item.remain })
+            }
+            return acc
+          },
+          [] as Array<{ name: string; remain: number }>
+        )
+
+        setPendingList(grouped)
       } else {
-        setPendingList([]);
+        setPendingList([])
       }
     } catch {
       // Silently fail - don't show error for this
     } finally {
-      setLoadingRemain(false);
+      setLoadingRemain(false)
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    fetchRemainState();
-    const interval = setInterval(fetchRemainState, 30000); // Refresh every 30 seconds
-    return () => clearInterval(interval);
-  }, [fetchRemainState]);
+    fetchRemainState()
+    const interval = setInterval(fetchRemainState, 30000) // Refresh every 30 seconds
+    return () => clearInterval(interval)
+  }, [fetchRemainState])
 
   const topProducts = [
     { key: 1, rank: 1, name: 'Honda SH Mode 2025', sales: 156, revenue: '15.600' },
@@ -70,14 +80,14 @@ const Dashboard = () => {
     { key: 6, rank: 6, name: 'Honda PCX 160', sales: 87, revenue: '18.270' },
     { key: 7, rank: 7, name: 'Honda Winner X', sales: 76, revenue: '11.400' },
     { key: 8, rank: 8, name: 'Honda CRF150L', sales: 65, revenue: '13.650' },
-  ];
+  ]
 
   return (
     <div>
       <Card style={{ marginBottom: 24 }}>
         <Radio.Group
           value={timeRange}
-          onChange={(e) => setTimeRange(e.target.value)}
+          onChange={e => setTimeRange(e.target.value)}
           buttonStyle="solid"
         >
           <Radio.Button value="month">Theo tháng</Radio.Button>
@@ -101,7 +111,8 @@ const Dashboard = () => {
                 <Space wrap>
                   {pendingList.map((item, index) => (
                     <Tag key={index} color="orange" style={{ marginBottom: 4 }}>
-                      <strong>{item.name}</strong> - Cần nhập thông tin: <strong>{item.remain} xe</strong>
+                      <strong>{item.name}</strong> - Cần nhập thông tin:{' '}
+                      <strong>{item.remain} xe</strong>
                     </Tag>
                   ))}
                 </Space>
@@ -138,7 +149,8 @@ const Dashboard = () => {
               valueStyle={{ color: '#1890ff' }}
             />
             <div style={{ marginTop: 8, color: '#52c41a', fontSize: 12 }}>
-              <ArrowUpOutlined /> +15.2% so với {timeRange === 'month' ? 'tháng trước' : 'năm trước'}
+              <ArrowUpOutlined /> +15.2% so với{' '}
+              {timeRange === 'month' ? 'tháng trước' : 'năm trước'}
             </div>
           </Card>
         </Col>
@@ -167,7 +179,8 @@ const Dashboard = () => {
               valueStyle={{ color: '#722ed1' }}
             />
             <div style={{ marginTop: 8, color: '#52c41a', fontSize: 12 }}>
-              <ArrowUpOutlined /> +10.1% so với {timeRange === 'month' ? 'tháng trước' : 'năm trước'}
+              <ArrowUpOutlined /> +10.1% so với{' '}
+              {timeRange === 'month' ? 'tháng trước' : 'năm trước'}
             </div>
           </Card>
         </Col>
@@ -186,7 +199,6 @@ const Dashboard = () => {
         </Col>
       </Row>
 
-
       <Card title="Xe bán chạy nhất">
         <Table
           dataSource={topProducts}
@@ -198,7 +210,13 @@ const Dashboard = () => {
               width: 100,
               align: 'center',
               render: (rank: number) => (
-                <span style={{ fontWeight: 'bold', fontSize: 16, color: rank <= 3 ? '#1890ff' : '#666' }}>
+                <span
+                  style={{
+                    fontWeight: 'bold',
+                    fontSize: 16,
+                    color: rank <= 3 ? '#1890ff' : '#666',
+                  }}
+                >
                   #{rank}
                 </span>
               ),
@@ -223,12 +241,8 @@ const Dashboard = () => {
               align: 'right',
               render: (revenue: string) => {
                 // Convert from millions to billions
-                const billions = (parseFloat(revenue) / 1000).toFixed(3);
-                return (
-                  <span style={{ fontWeight: 500, color: '#52c41a' }}>
-                    {billions} tỷ VNĐ
-                  </span>
-                );
+                const billions = (parseFloat(revenue) / 1000).toFixed(3)
+                return <span style={{ fontWeight: 500, color: '#52c41a' }}>{billions} tỷ VNĐ</span>
               },
             },
           ]}
@@ -237,7 +251,7 @@ const Dashboard = () => {
         />
       </Card>
     </div>
-  );
-};
+  )
+}
 
-export default Dashboard;
+export default Dashboard

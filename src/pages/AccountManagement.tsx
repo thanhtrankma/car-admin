@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Input,
   Button,
@@ -13,7 +13,7 @@ import {
   Select,
   Tag,
   Spin,
-} from 'antd';
+} from 'antd'
 import {
   SearchOutlined,
   PlusOutlined,
@@ -22,7 +22,7 @@ import {
   MailOutlined,
   PhoneOutlined,
   UserOutlined,
-} from '@ant-design/icons';
+} from '@ant-design/icons'
 import {
   listUsers,
   createUser,
@@ -30,31 +30,31 @@ import {
   deleteUser,
   type UserDto,
   type UserPayload,
-} from '../services/userService';
+} from '../services/userService'
 
 interface FormValues {
-  username: string;
-  fullName: string;
-  email: string;
-  phone_number?: string;
-  password?: string;
-  role: string;
-  status: string;
-  avatar_url?: string;
+  username: string
+  fullName: string
+  email: string
+  phone_number?: string
+  password?: string
+  role: string
+  status: string
+  avatar_url?: string
 }
 
-const DEFAULT_ROLE = 'USER';
-const DEFAULT_STATUS = 'ACTIVE';
+const DEFAULT_ROLE = 'USER'
+const DEFAULT_STATUS = 'ACTIVE'
 
 const AccountManagement = () => {
-  const [accounts, setAccounts] = useState<UserDto[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [listLoading, setListLoading] = useState(false);
-  const [modalLoading, setModalLoading] = useState(false);
-  const [form] = Form.useForm<FormValues>();
+  const [accounts, setAccounts] = useState<UserDto[]>([])
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>()
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [listLoading, setListLoading] = useState(false)
+  const [modalLoading, setModalLoading] = useState(false)
+  const [form] = Form.useForm<FormValues>()
 
   const passwordRules = useMemo(() => {
     if (editingId) {
@@ -62,36 +62,36 @@ const AccountManagement = () => {
         {
           validator: (_: unknown, value?: string) => {
             if (!value) {
-              return Promise.resolve();
+              return Promise.resolve()
             }
             if (value.length < 6) {
-              return Promise.reject(new Error('Mật khẩu tối thiểu 6 ký tự'));
+              return Promise.reject(new Error('Mật khẩu tối thiểu 6 ký tự'))
             }
-            return Promise.resolve();
+            return Promise.resolve()
           },
         },
-      ];
+      ]
     }
     return [
       { required: true, message: 'Vui lòng nhập mật khẩu' },
       { min: 6, message: 'Mật khẩu tối thiểu 6 ký tự' },
-    ];
-  }, [editingId]);
+    ]
+  }, [editingId])
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN');
-  };
+    const date = new Date(dateString)
+    return date.toLocaleDateString('vi-VN')
+  }
 
   const getStatusColor = (status: string) => {
-    if (status === 'ACTIVE') return 'green';
-    if (status === 'INACTIVE') return 'red';
-    return 'default';
-  };
+    if (status === 'ACTIVE') return 'green'
+    if (status === 'INACTIVE') return 'red'
+    return 'default'
+  }
 
   const fetchAccounts = useCallback(async () => {
     try {
-      setListLoading(true);
+      setListLoading(true)
       const response = await listUsers({
         search: searchTerm || undefined,
         status: statusFilter || undefined,
@@ -99,37 +99,37 @@ const AccountManagement = () => {
         limit: 12,
         sortBy: 'created_at',
         sortOrder: 'desc',
-      });
-      setAccounts(response.data);
+      })
+      setAccounts(response.data)
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : 'Không thể tải danh sách tài khoản';
-      message.error(errorMessage);
+        error instanceof Error ? error.message : 'Không thể tải danh sách tài khoản'
+      message.error(errorMessage)
     } finally {
-      setListLoading(false);
+      setListLoading(false)
     }
-  }, [searchTerm, statusFilter]);
+  }, [searchTerm, statusFilter])
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      fetchAccounts();
-    }, 400);
-    return () => clearTimeout(timeout);
-  }, [fetchAccounts]);
+      fetchAccounts()
+    }, 400)
+    return () => clearTimeout(timeout)
+  }, [fetchAccounts])
 
   const handleDelete = async (id: string) => {
     try {
-      await deleteUser(id);
-      message.success('Xóa tài khoản thành công!');
-      fetchAccounts();
+      await deleteUser(id)
+      message.success('Xóa tài khoản thành công!')
+      fetchAccounts()
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Không thể xóa tài khoản';
-      message.error(errorMessage);
+      const errorMessage = error instanceof Error ? error.message : 'Không thể xóa tài khoản'
+      message.error(errorMessage)
     }
-  };
+  }
 
   const handleEdit = (account: UserDto) => {
-    setEditingId(account.id);
+    setEditingId(account.id)
     form.setFieldsValue({
       username: account.username,
       email: account.email,
@@ -138,9 +138,9 @@ const AccountManagement = () => {
       role: account.role,
       status: account.status,
       avatar_url: account.avatar_url,
-    });
-    setIsModalOpen(true);
-  };
+    })
+    setIsModalOpen(true)
+  }
 
   const buildPayload = (values: FormValues): UserPayload => {
     const payload: UserPayload = {
@@ -151,51 +151,51 @@ const AccountManagement = () => {
       status: values.status,
       avatar_url: values.avatar_url || undefined,
       phone_number: values.phone_number || undefined,
-    };
-    if (values.password) {
-      payload.password = values.password;
     }
-    return payload;
-  };
+    if (values.password) {
+      payload.password = values.password
+    }
+    return payload
+  }
 
   const handleSave = async (values: FormValues) => {
     try {
-      setModalLoading(true);
-      const payload = buildPayload(values);
+      setModalLoading(true)
+      const payload = buildPayload(values)
       if (editingId) {
-        await updateUser(editingId, payload);
-        message.success('Cập nhật tài khoản thành công!');
+        await updateUser(editingId, payload)
+        message.success('Cập nhật tài khoản thành công!')
       } else {
-        await createUser(payload);
-        message.success('Tạo tài khoản thành công!');
+        await createUser(payload)
+        message.success('Tạo tài khoản thành công!')
       }
-      setIsModalOpen(false);
-      setEditingId(null);
-      form.resetFields();
-      fetchAccounts();
+      setIsModalOpen(false)
+      setEditingId(null)
+      form.resetFields()
+      fetchAccounts()
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Không thể lưu tài khoản';
-      message.error(errorMessage);
+      const errorMessage = error instanceof Error ? error.message : 'Không thể lưu tài khoản'
+      message.error(errorMessage)
     } finally {
-      setModalLoading(false);
+      setModalLoading(false)
     }
-  };
+  }
 
   const handleCancel = () => {
-    setIsModalOpen(false);
-    setEditingId(null);
-    form.resetFields();
-  };
+    setIsModalOpen(false)
+    setEditingId(null)
+    form.resetFields()
+  }
 
   const handleAdd = () => {
-    setEditingId(null);
-    form.resetFields();
+    setEditingId(null)
+    form.resetFields()
     form.setFieldsValue({
       role: DEFAULT_ROLE,
       status: DEFAULT_STATUS,
-    });
-    setIsModalOpen(true);
-  };
+    })
+    setIsModalOpen(true)
+  }
 
   return (
     <div>
@@ -240,7 +240,7 @@ const AccountManagement = () => {
             placeholder="Tìm kiếm theo tên, email hoặc username..."
             prefix={<SearchOutlined />}
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={e => setSearchTerm(e.target.value)}
             size="large"
             allowClear
           />
@@ -250,7 +250,7 @@ const AccountManagement = () => {
             placeholder="Trạng thái"
             style={{ minWidth: 160 }}
             value={statusFilter}
-            onChange={(value) => setStatusFilter(value)}
+            onChange={value => setStatusFilter(value)}
             options={[
               { value: 'ACTIVE', label: 'Đang hoạt động' },
               { value: 'INACTIVE', label: 'Ngừng hoạt động' },
@@ -261,7 +261,7 @@ const AccountManagement = () => {
 
       <Spin spinning={listLoading}>
         <Row gutter={[16, 16]}>
-          {accounts.map((account) => (
+          {accounts.map(account => (
             <Col xs={24} sm={12} lg={8} key={account.id}>
               <Card
                 hoverable
@@ -289,14 +289,20 @@ const AccountManagement = () => {
                     Tham gia từ {formatDate(account.created_at)}
                   </p>
 
-                  <Space direction="vertical" size="small" style={{ width: '100%', marginBottom: 16 }}>
+                  <Space
+                    direction="vertical"
+                    size="small"
+                    style={{ width: '100%', marginBottom: 16 }}
+                  >
                     <div>
                       <MailOutlined style={{ marginRight: 8, color: '#666' }} />
                       <span style={{ fontSize: 14 }}>{account.email}</span>
                     </div>
                     <div>
                       <PhoneOutlined style={{ marginRight: 8, color: '#666' }} />
-                      <span style={{ fontSize: 14 }}>{account.phone_number || 'Chưa cập nhật'}</span>
+                      <span style={{ fontSize: 14 }}>
+                        {account.phone_number || 'Chưa cập nhật'}
+                      </span>
                     </div>
                     <div>
                       <UserOutlined style={{ marginRight: 8, color: '#666' }} />
@@ -325,7 +331,9 @@ const AccountManagement = () => {
 
       {!listLoading && accounts.length === 0 && (
         <Card>
-          <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>Không tìm thấy tài khoản</div>
+          <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
+            Không tìm thấy tài khoản
+          </div>
         </Card>
       )}
 
@@ -421,9 +429,7 @@ const AccountManagement = () => {
         </Form>
       </Modal>
     </div>
-  );
-};
+  )
+}
 
-export default AccountManagement;
-
-
+export default AccountManagement

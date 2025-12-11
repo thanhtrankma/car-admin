@@ -1,54 +1,56 @@
-import { useState } from 'react';
-import { Form, Input, Button, Image, message } from 'antd';
-import { UserOutlined, LockOutlined } from '@ant-design/icons';
-import { login as loginService } from '../services/authService';
+import { useState } from 'react'
+import { Form, Input, Button, Image, message } from 'antd'
+import { UserOutlined, LockOutlined } from '@ant-design/icons'
+import { login as loginService } from '../services/authService'
 
 interface LoginProps {
-  onLogin: (role: 'manager' | 'staff') => void;
+  onLogin: (role: 'manager' | 'staff') => void
 }
 
 const Login = ({ onLogin }: LoginProps) => {
-  const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
+  const [form] = Form.useForm()
+  const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (values: Record<string, string>) => {
     if (!values.username || !values.password) {
-      return;
+      return
     }
 
     try {
-      setLoading(true);
+      setLoading(true)
       const response = await loginService({
         username: values.username,
         password: values.password,
-      });
+      })
 
-      localStorage.setItem('accessToken', response.accessToken);
-      localStorage.setItem('currentUser', JSON.stringify(response.user));
+      localStorage.setItem('accessToken', response.accessToken)
+      localStorage.setItem('currentUser', JSON.stringify(response.user))
 
-      message.success(response.message || 'Đăng nhập thành công');
-      form.resetFields();
-      onLogin(response.user.role === 'ADMIN' ? 'manager' : 'staff');
+      message.success(response.message || 'Đăng nhập thành công')
+      form.resetFields()
+      onLogin(response.user.role === 'ADMIN' ? 'manager' : 'staff')
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Đăng nhập thất bại';
-      message.error(errorMessage);
+      const errorMessage = error instanceof Error ? error.message : 'Đăng nhập thất bại'
+      message.error(errorMessage)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      position: 'relative',
-      overflow: 'hidden',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
-      backgroundSize: '400% 400%',
-      animation: 'gradientShift 15s ease infinite',
-    }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        overflow: 'hidden',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+        backgroundSize: '400% 400%',
+        animation: 'gradientShift 15s ease infinite',
+      }}
+    >
       <style>{`
         @keyframes gradientShift {
           0% { background-position: 0% 50%; }
@@ -87,50 +89,67 @@ const Login = ({ onLogin }: LoginProps) => {
       `}</style>
 
       {/* Animated background shapes */}
-      <div className="floating-shape" style={{
-        width: '300px',
-        height: '300px',
-        top: '10%',
-        left: '10%',
-        animationDelay: '0s',
-      }} />
-      <div className="floating-shape" style={{
-        width: '200px',
-        height: '200px',
-        bottom: '15%',
-        right: '15%',
-        animationDelay: '2s',
-      }} />
-      <div className="floating-shape" style={{
-        width: '150px',
-        height: '150px',
-        top: '50%',
-        right: '10%',
-        animationDelay: '4s',
-      }} />
+      <div
+        className="floating-shape"
+        style={{
+          width: '300px',
+          height: '300px',
+          top: '10%',
+          left: '10%',
+          animationDelay: '0s',
+        }}
+      />
+      <div
+        className="floating-shape"
+        style={{
+          width: '200px',
+          height: '200px',
+          bottom: '15%',
+          right: '15%',
+          animationDelay: '2s',
+        }}
+      />
+      <div
+        className="floating-shape"
+        style={{
+          width: '150px',
+          height: '150px',
+          top: '50%',
+          right: '10%',
+          animationDelay: '4s',
+        }}
+      />
 
-      <div className="login-card" style={{
-        width: '100%',
-        maxWidth: 480,
-        margin: '0 16px',
-        borderRadius: 24,
-        padding: '48px 40px',
-        position: 'relative',
-        zIndex: 1,
-      }}>
+      <div
+        className="login-card"
+        style={{
+          width: '100%',
+          maxWidth: 480,
+          margin: '0 16px',
+          borderRadius: 24,
+          padding: '48px 40px',
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
         {/* Logo Section */}
-        <div className="logo-container" style={{
-          textAlign: 'center',
-          marginBottom: 40,
-        }}>
-          <div style={{
-            display: 'inline-block',
-            padding: '20px',
-            borderRadius: '20px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            marginBottom: 20,
-            boxShadow: '0 10px 30px rgba(102, 126, 234, 0.3)',
-          }}>
+        <div
+          className="logo-container"
+          style={{
+            textAlign: 'center',
+            marginBottom: 40,
+          }}
+        >
+          <div
+            style={{
+              display: 'inline-block',
+              padding: '20px',
+              borderRadius: '20px',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              marginBottom: 20,
+              boxShadow: '0 10px 30px rgba(102, 126, 234, 0.3)',
+            }}
+          >
             <Image
               src="/images/honda.png"
               alt="logo"
@@ -141,22 +160,26 @@ const Login = ({ onLogin }: LoginProps) => {
               }}
             />
           </div>
-          <h1 style={{
-            color: '#1a1a1a',
-            margin: 0,
-            fontSize: 28,
-            fontWeight: 700,
-            letterSpacing: '-0.5px',
-            marginTop: 16,
-          }}>
+          <h1
+            style={{
+              color: '#1a1a1a',
+              margin: 0,
+              fontSize: 28,
+              fontWeight: 700,
+              letterSpacing: '-0.5px',
+              marginTop: 16,
+            }}
+          >
             Chào mừng trở lại
           </h1>
-          <p style={{
-            color: '#666',
-            margin: '8px 0 0 0',
-            fontSize: 15,
-            fontWeight: 400,
-          }}>
+          <p
+            style={{
+              color: '#666',
+              margin: '8px 0 0 0',
+              fontSize: 15,
+              fontWeight: 400,
+            }}
+          >
             Đăng nhập để tiếp tục quản lý hệ thống
           </p>
         </div>
@@ -185,13 +208,13 @@ const Login = ({ onLogin }: LoginProps) => {
                 border: '2px solid #e8e8e8',
                 transition: 'all 0.3s ease',
               }}
-              onFocus={(e) => {
-                e.target.style.borderColor = '#667eea';
-                e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+              onFocus={e => {
+                e.target.style.borderColor = '#667eea'
+                e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)'
               }}
-              onBlur={(e) => {
-                e.target.style.borderColor = '#e8e8e8';
-                e.target.style.boxShadow = 'none';
+              onBlur={e => {
+                e.target.style.borderColor = '#e8e8e8'
+                e.target.style.boxShadow = 'none'
               }}
             />
           </Form.Item>
@@ -212,13 +235,13 @@ const Login = ({ onLogin }: LoginProps) => {
                 border: '2px solid #e8e8e8',
                 transition: 'all 0.3s ease',
               }}
-              onFocus={(e) => {
-                e.target.style.borderColor = '#667eea';
-                e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+              onFocus={e => {
+                e.target.style.borderColor = '#667eea'
+                e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)'
               }}
-              onBlur={(e) => {
-                e.target.style.borderColor = '#e8e8e8';
-                e.target.style.boxShadow = 'none';
+              onBlur={e => {
+                e.target.style.borderColor = '#e8e8e8'
+                e.target.style.boxShadow = 'none'
               }}
             />
           </Form.Item>
@@ -239,13 +262,13 @@ const Login = ({ onLogin }: LoginProps) => {
                 boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
                 transition: 'all 0.3s ease',
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.5)';
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'translateY(-2px)'
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.5)'
               }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)';
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)'
               }}
             >
               Đăng nhập
@@ -254,7 +277,7 @@ const Login = ({ onLogin }: LoginProps) => {
         </Form>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Login;
+export default Login

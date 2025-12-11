@@ -1,42 +1,43 @@
-import { useEffect, useState } from 'react';
-import { Card, Avatar, Descriptions, Tag, Spin, message, Button } from 'antd';
-import { getProfile, type AuthUser } from '../services/authService';
+import { useEffect, useState } from 'react'
+import { Card, Avatar, Descriptions, Tag, Spin, message, Button } from 'antd'
+import { getProfile, type AuthUser } from '../services/authService'
 
 const Profile = () => {
-  const [profile, setProfile] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<AuthUser | null>(null)
+  const [loading, setLoading] = useState(true)
 
   const fetchProfile = async () => {
     try {
-      setLoading(true);
-      const data = await getProfile();
-      setProfile(data);
+      setLoading(true)
+      const data = await getProfile()
+      setProfile(data)
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Không thể tải thông tin cá nhân';
-      message.error(errorMessage);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Không thể tải thông tin cá nhân'
+      message.error(errorMessage)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   useEffect(() => {
-    fetchProfile();
-  }, []);
+    fetchProfile()
+  }, [])
 
   const renderAvatar = () => {
     if (profile?.fullName) {
       const initials = profile.fullName
         .split(' ')
-        .map((part) => part.charAt(0).toUpperCase())
+        .map(part => part.charAt(0).toUpperCase())
         .slice(0, 2)
-        .join('');
-      return initials || profile.fullName.charAt(0).toUpperCase();
+        .join('')
+      return initials || profile.fullName.charAt(0).toUpperCase()
     }
     if (profile?.username) {
-      return profile.username.charAt(0).toUpperCase();
+      return profile.username.charAt(0).toUpperCase()
     }
-    return 'U';
-  };
+    return 'U'
+  }
 
   return (
     <Spin spinning={loading}>
@@ -64,7 +65,9 @@ const Profile = () => {
             </div>
             <Descriptions column={1} bordered>
               <Descriptions.Item label="Tên đăng nhập">{profile.username}</Descriptions.Item>
-              <Descriptions.Item label="Họ và tên">{profile.fullName || 'Chưa cập nhật'}</Descriptions.Item>
+              <Descriptions.Item label="Họ và tên">
+                {profile.fullName || 'Chưa cập nhật'}
+              </Descriptions.Item>
               <Descriptions.Item label="Email">{profile.email}</Descriptions.Item>
               <Descriptions.Item label="Vai trò">{profile.role}</Descriptions.Item>
               <Descriptions.Item label="Trạng thái">
@@ -81,9 +84,7 @@ const Profile = () => {
         )}
       </Card>
     </Spin>
-  );
-};
+  )
+}
 
-export default Profile;
-
-
+export default Profile

@@ -1,67 +1,63 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import { message } from 'antd';
-import { logout as logoutService } from './services/authService';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import CarManagement from './pages/CarManagement';
-import AddCar from './pages/AddCar';
-import EditCar from './pages/EditCar';
-import CarDetail from './pages/CarDetail';
-import OrderManagement from './pages/OrderManagement';
-import CustomerManagement from './pages/CustomerManagement';
-import AccountManagement from './pages/AccountManagement';
-import StockIn from './pages/StockIn';
-import Reports from './pages/Reports';
-import Profile from './pages/Profile';
-import PendingCarUpdate from './pages/PendingCarUpdate';
-import Layout from './components/Layout';
-import AdminRoute from './middleware/adminOnly';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { message } from 'antd'
+import { logout as logoutService } from './services/authService'
+import Login from './pages/Login'
+import Dashboard from './pages/Dashboard'
+import CarManagement from './pages/CarManagement'
+import AddCar from './pages/AddCar'
+import EditCar from './pages/EditCar'
+import CarDetail from './pages/CarDetail'
+import OrderManagement from './pages/OrderManagement'
+import CustomerManagement from './pages/CustomerManagement'
+import AccountManagement from './pages/AccountManagement'
+import StockIn from './pages/StockIn'
+import Reports from './pages/Reports'
+import Profile from './pages/Profile'
+import PendingCarUpdate from './pages/PendingCarUpdate'
+import Layout from './components/Layout'
+import AdminRoute from './middleware/adminOnly'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return (
       localStorage.getItem('isAuthenticated') === 'true' ||
       Boolean(localStorage.getItem('accessToken'))
-    );
-  });
+    )
+  })
 
   useEffect(() => {
-    localStorage.setItem('isAuthenticated', String(isAuthenticated));
-  }, [isAuthenticated]);
+    localStorage.setItem('isAuthenticated', String(isAuthenticated))
+  }, [isAuthenticated])
 
   const handleLogin = (role: 'manager' | 'staff') => {
-    localStorage.setItem('userRole', role);
-    setIsAuthenticated(true);
-  };
+    localStorage.setItem('userRole', role)
+    setIsAuthenticated(true)
+  }
 
   const handleLogout = async () => {
     try {
-      await logoutService();
-      message.success('Đăng xuất thành công');
+      await logoutService()
+      message.success('Đăng xuất thành công')
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Đăng xuất thất bại';
-      message.error(errorMessage);
+      const errorMessage = error instanceof Error ? error.message : 'Đăng xuất thất bại'
+      message.error(errorMessage)
     } finally {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('currentUser');
-      localStorage.removeItem('userRole');
-      setIsAuthenticated(false);
+      localStorage.removeItem('accessToken')
+      localStorage.removeItem('currentUser')
+      localStorage.removeItem('userRole')
+      setIsAuthenticated(false)
     }
-  };
+  }
 
   return (
     <Router>
       <Routes>
-        <Route 
-          path="/login" 
+        <Route
+          path="/login"
           element={
-            isAuthenticated ? (
-              <Navigate to="/dashboard" replace />
-            ) : (
-              <Login onLogin={handleLogin} />
-            )
-          } 
+            isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login onLogin={handleLogin} />
+          }
         />
         <Route
           path="/"
@@ -223,7 +219,7 @@ function App() {
         />
       </Routes>
     </Router>
-  );
+  )
 }
 
-export default App;
+export default App

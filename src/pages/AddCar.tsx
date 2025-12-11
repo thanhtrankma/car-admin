@@ -1,26 +1,47 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
-import { Form, Input, InputNumber, Select, Button, Card, Upload as AntUpload, message, Space, Row, Col, DatePicker, Spin } from 'antd';
-import type { UploadFile } from 'antd';
-import { UploadOutlined } from '@ant-design/icons';
-import dayjs, { type Dayjs } from 'dayjs';
-import { createProduct, getProductByCode, updateProduct, uploadProductImages, listProductTypes, type ProductTypeDto } from '../services/productService';
+import { useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
+import {
+  Form,
+  Input,
+  InputNumber,
+  Select,
+  Button,
+  Card,
+  Upload as AntUpload,
+  message,
+  Space,
+  Row,
+  Col,
+  DatePicker,
+  Spin,
+} from 'antd'
+import type { UploadFile } from 'antd'
+import { UploadOutlined } from '@ant-design/icons'
+import dayjs, { type Dayjs } from 'dayjs'
+import {
+  createProduct,
+  getProductByCode,
+  updateProduct,
+  uploadProductImages,
+  listProductTypes,
+  type ProductTypeDto,
+} from '../services/productService'
 
-const { Option } = Select;
+const { Option } = Select
 
 const VEHICLE_TYPES = [
   { value: 1, label: 'Xe tay ga' },
   { value: 2, label: 'Xe số' },
   { value: 3, label: 'Xe côn tay' },
-];
+]
 
 const WAREHOUSE_STATUSES = [
   { value: 1, label: 'Còn hàng' },
   { value: 2, label: 'Hết hàng' },
   { value: 3, label: 'Sắp về' },
   { value: 4, label: 'Đang bảo hành' },
-];
+]
 
 const COLOR_OPTIONS = [
   'Đỏ',
@@ -38,65 +59,67 @@ const COLOR_OPTIONS = [
   'Đen nhám',
   'Đen xanh',
   'Bạc',
-];
+]
 
 const generateSKU = () => {
-  const prefix = 'SKU';
-  const timestamp = Date.now().toString().slice(-6);
-  const randomNum = Math.floor(Math.random() * 100).toString().padStart(2, '0');
-  return `${prefix}${timestamp}${randomNum}`;
-};
+  const prefix = 'SKU'
+  const timestamp = Date.now().toString().slice(-6)
+  const randomNum = Math.floor(Math.random() * 100)
+    .toString()
+    .padStart(2, '0')
+  return `${prefix}${timestamp}${randomNum}`
+}
 
 interface AddCarFormValues {
-  name: string;
-  vehicleType: number;
-  version: string;
-  line?: string;
-  weight?: number;
-  cc?: number;
-  manufacturedDate?: number;
-  color?: string;
-  chassisNumber?: string;
-  engineNumber?: string;
-  receiptDate?: Dayjs;
-  cost?: number;
-  price?: number;
-  quantity?: number;
-  warehouseStatus: number;
+  name: string
+  vehicleType: number
+  version: string
+  line?: string
+  weight?: number
+  cc?: number
+  manufacturedDate?: number
+  color?: string
+  chassisNumber?: string
+  engineNumber?: string
+  receiptDate?: Dayjs
+  cost?: number
+  price?: number
+  quantity?: number
+  warehouseStatus: number
 }
 
 const normalizeImageUrl = (url: string) => {
-  if (!url) return '';
-  if (/^https?:\/\//i.test(url)) return url;
-  return `http://${url}`;
-};
+  if (!url) return ''
+  if (/^https?:\/\//i.test(url)) return url
+  return `http://${url}`
+}
 
 const AddCar = () => {
-  const navigate = useNavigate();
-  const { code } = useParams<{ code?: string }>();
-  const isEditMode = Boolean(code);
-  const [form] = Form.useForm();
-  const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [sku, setSku] = useState<string>(generateSKU());
-  const [submitting, setSubmitting] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(false);
-  const [productId, setProductId] = useState<string | null>(null);
-  const [productTypes, setProductTypes] = useState<ProductTypeDto[]>([]);
-  const [productTypesLoading, setProductTypesLoading] = useState(false);
+  const navigate = useNavigate()
+  const { code } = useParams<{ code?: string }>()
+  const isEditMode = Boolean(code)
+  const [form] = Form.useForm()
+  const [fileList, setFileList] = useState<UploadFile[]>([])
+  const [sku, setSku] = useState<string>(generateSKU())
+  const [submitting, setSubmitting] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(false)
+  const [productId, setProductId] = useState<string | null>(null)
+  const [productTypes, setProductTypes] = useState<ProductTypeDto[]>([])
+  const [productTypesLoading, setProductTypesLoading] = useState(false)
 
   const handleSubmit = async (values: AddCarFormValues) => {
     const existingImageUrls = fileList
-      .filter((file) => !file.originFileObj)
-      .map((file) => (file.response as string) || file.name || '')
-      .filter(Boolean);
+      .filter(file => !file.originFileObj)
+      .map(file => (file.response as string) || file.name || '')
+      .filter(Boolean)
 
     const newFiles = fileList
       .filter((file): file is UploadFile & { originFileObj: File } => Boolean(file.originFileObj))
-      .map((file) => file.originFileObj as File);
+      .map(file => file.originFileObj as File)
 
-    let uploadedImageUrls: string[] = [];
+    let uploadedImageUrls: string[] = []
     if (newFiles.length) {
-      uploadedImageUrls = await uploadProductImages(newFiles);
+      uploadedImageUrls = await uploadProductImages(newFiles)
     }
 
     const payload = {
@@ -106,7 +129,8 @@ const AddCar = () => {
       line: values.line,
       weight: values.weight !== undefined ? String(values.weight) : undefined,
       cc: values.cc !== undefined ? String(values.cc) : undefined,
-      manufacturedDate: values.manufacturedDate !== undefined ? String(values.manufacturedDate) : undefined,
+      manufacturedDate:
+        values.manufacturedDate !== undefined ? String(values.manufacturedDate) : undefined,
       color: values.color,
       chassisNumber: values.chassisNumber,
       engineNumber: values.engineNumber,
@@ -116,63 +140,64 @@ const AddCar = () => {
       quantity: values.quantity ?? 0,
       warehouseStatus: values.warehouseStatus,
       images: [...existingImageUrls, ...uploadedImageUrls],
-    };
+    }
 
-    setSubmitting(true);
+    setSubmitting(true)
     try {
       if (isEditMode) {
         if (!productId) {
-          throw new Error('Không tìm thấy mã sản phẩm');
+          throw new Error('Không tìm thấy mã sản phẩm')
         }
-        await updateProduct(productId, payload);
-        message.success('Cập nhật xe thành công!');
+        await updateProduct(productId, payload)
+        message.success('Cập nhật xe thành công!')
       } else {
-        await createProduct(payload);
-        message.success('Thêm xe thành công!');
+        await createProduct(payload)
+        message.success('Thêm xe thành công!')
       }
-      navigate('/cars');
+      navigate('/cars')
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Không thể lưu xe';
-      message.error(errorMessage);
+      const errorMessage = error instanceof Error ? error.message : 'Không thể lưu xe'
+      message.error(errorMessage)
     } finally {
-      setSubmitting(false);
+      setSubmitting(false)
     }
-  };
+  }
 
   const handleImageChange = (info: { fileList: UploadFile[] }) => {
-    setFileList(info.fileList);
-  };
+    setFileList(info.fileList)
+  }
 
   const beforeUpload = () => {
-    return false;
-  };
+    return false
+  }
 
   useEffect(() => {
     const fetchProductTypes = async () => {
-      setProductTypesLoading(true);
+      setProductTypesLoading(true)
       try {
-        const response = await listProductTypes(1, 100);
-        setProductTypes(response.data);
+        const response = await listProductTypes(1, 100)
+        setProductTypes(response.data)
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Không thể tải danh sách tên xe';
-        message.error(errorMessage);
+        const errorMessage =
+          error instanceof Error ? error.message : 'Không thể tải danh sách tên xe'
+        message.error(errorMessage)
       } finally {
-        setProductTypesLoading(false);
+        setProductTypesLoading(false)
       }
-    };
+    }
 
-    fetchProductTypes();
-  }, []);
+    fetchProductTypes()
+  }, [])
 
   useEffect(() => {
-    if (!isEditMode || !code) return;
+    if (!isEditMode || !code) return
 
     const fetchProduct = async () => {
-      setInitialLoading(true);
+      setInitialLoading(true)
       try {
-        const product = await getProductByCode(code);
-        setProductId(product.id);
-        setSku(product.sku || generateSKU());
+        const product = await getProductByCode(code)
+        setProductId(product.id)
+        setSku(product.sku || generateSKU())
         form.setFieldsValue({
           name: product.name,
           vehicleType: product.vehicleType,
@@ -180,7 +205,9 @@ const AddCar = () => {
           line: product.line,
           weight: product.weight ? parseFloat(product.weight.toString()) : undefined,
           cc: product.cc ? parseFloat(product.cc.toString()) : undefined,
-          manufacturedDate: product.manufacturedDate ? parseInt(product.manufacturedDate, 10) : undefined,
+          manufacturedDate: product.manufacturedDate
+            ? parseInt(product.manufacturedDate, 10)
+            : undefined,
           color: product.color,
           chassisNumber: product.chassisNumber,
           engineNumber: product.engineNumber,
@@ -189,7 +216,7 @@ const AddCar = () => {
           price: product.price,
           quantity: product.quantity,
           warehouseStatus: product.warehouseStatus,
-        });
+        })
         setFileList(
           (product.images ?? []).map((url, index) => ({
             uid: `${index}`,
@@ -198,27 +225,23 @@ const AddCar = () => {
             url: normalizeImageUrl(url),
             response: url,
           })) as UploadFile[]
-        );
+        )
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Không thể tải thông tin xe';
-        message.error(errorMessage);
-        navigate('/cars');
+        const errorMessage = error instanceof Error ? error.message : 'Không thể tải thông tin xe'
+        message.error(errorMessage)
+        navigate('/cars')
       } finally {
-        setInitialLoading(false);
+        setInitialLoading(false)
       }
-    };
+    }
 
-    fetchProduct();
-  }, [code, form, isEditMode, navigate]);
+    fetchProduct()
+  }, [code, form, isEditMode, navigate])
 
   return (
     <div>
       <Space align="center" style={{ marginBottom: 24 }}>
-        <Button
-          icon={<ArrowLeft />}
-          onClick={() => navigate('/cars')}
-          type="text"
-        />
+        <Button icon={<ArrowLeft />} onClick={() => navigate('/cars')} type="text" />
         <h1 style={{ fontSize: 24, fontWeight: 'bold', margin: 0 }}>
           {isEditMode ? 'Chỉnh sửa xe' : 'Thêm mới xe'}
         </h1>
@@ -249,11 +272,11 @@ const AddCar = () => {
                     showSearch
                     optionFilterProp="children"
                     filterOption={(input, option) => {
-                      const labelText = typeof option?.children === 'string' ? option.children : '';
-                      return labelText.toLowerCase().includes(input.toLowerCase());
+                      const labelText = typeof option?.children === 'string' ? option.children : ''
+                      return labelText.toLowerCase().includes(input.toLowerCase())
                     }}
                   >
-                    {productTypes.map((type) => (
+                    {productTypes.map(type => (
                       <Option key={type.id} value={type.name}>
                         {type.name}
                       </Option>
@@ -271,7 +294,7 @@ const AddCar = () => {
                   rules={[{ required: true, message: 'Vui lòng chọn loại xe' }]}
                 >
                   <Select placeholder="Chọn loại xe" size="large">
-                    {VEHICLE_TYPES.map((type) => (
+                    {VEHICLE_TYPES.map(type => (
                       <Option key={type.value} value={type.value}>
                         {type.label}
                       </Option>
@@ -294,13 +317,11 @@ const AddCar = () => {
                     {
                       validator: (_, value) => {
                         if (!value) {
-                          return Promise.resolve();
+                          return Promise.resolve()
                         }
                         return /^[A-Za-z]{12,25}$/.test(value)
                           ? Promise.resolve()
-                          : Promise.reject(
-                              new Error('Dòng chỉ gồm chữ cái, từ 12-25 ký tự')
-                            );
+                          : Promise.reject(new Error('Dòng chỉ gồm chữ cái, từ 12-25 ký tự'))
                       },
                     },
                   ]}
@@ -338,7 +359,7 @@ const AddCar = () => {
 
                 <Form.Item label="Màu sắc" name="color">
                   <Select placeholder="Chọn màu sắc" size="large" allowClear>
-                    {COLOR_OPTIONS.map((color) => (
+                    {COLOR_OPTIONS.map(color => (
                       <Option key={color} value={color}>
                         {color}
                       </Option>
@@ -374,7 +395,7 @@ const AddCar = () => {
                     placeholder="Nhập giá vốn"
                     size="large"
                     style={{ width: '100%' }}
-                    formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                     min={0}
                   />
                 </Form.Item>
@@ -388,7 +409,7 @@ const AddCar = () => {
                     placeholder="Nhập giá bán"
                     size="large"
                     style={{ width: '100%' }}
-                    formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                     min={0}
                   />
                 </Form.Item>
@@ -403,7 +424,7 @@ const AddCar = () => {
                   rules={[{ required: true, message: 'Vui lòng chọn trạng thái kho' }]}
                 >
                   <Select placeholder="Chọn trạng thái" size="large">
-                    {WAREHOUSE_STATUSES.map((status) => (
+                    {WAREHOUSE_STATUSES.map(status => (
                       <Option key={status.value} value={status.value}>
                         {status.label}
                       </Option>
@@ -450,10 +471,13 @@ const AddCar = () => {
 
             <Form.Item style={{ marginTop: 24, marginBottom: 0 }}>
               <Space style={{ width: '100%', justifyContent: 'flex-end' }} wrap>
-                <Button onClick={() => navigate('/cars')}>
-                  Hủy
-                </Button>
-                <Button type="primary" htmlType="submit" loading={submitting} disabled={isEditMode && initialLoading}>
+                <Button onClick={() => navigate('/cars')}>Hủy</Button>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={submitting}
+                  disabled={isEditMode && initialLoading}
+                >
                   {isEditMode ? 'Cập nhật' : 'Lưu'}
                 </Button>
               </Space>
@@ -462,7 +486,7 @@ const AddCar = () => {
         </Spin>
       </Card>
     </div>
-  );
-};
+  )
+}
 
-export default AddCar;
+export default AddCar

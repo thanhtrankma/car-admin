@@ -1,133 +1,156 @@
-import { useState, useEffect } from 'react';
-import { Button, Card, Table, Space, Modal, Form, InputNumber, DatePicker, message, Select, Input, Row, Col } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, InboxOutlined, CloseOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
-import { listProductTypes, listWarehouses, type ProductTypeDto, type WarehouseDto } from '../services/productService';
-import { apiRequest, ApiError } from '../services/apiClient';
+import { useState, useEffect } from 'react'
+import {
+  Button,
+  Card,
+  Table,
+  Space,
+  Modal,
+  Form,
+  InputNumber,
+  DatePicker,
+  message,
+  Select,
+  Input,
+  Row,
+  Col,
+} from 'antd'
+import type { ColumnsType } from 'antd/es/table'
+import { PlusOutlined, InboxOutlined, CloseOutlined } from '@ant-design/icons'
+import dayjs from 'dayjs'
+import {
+  listProductTypes,
+  listWarehouses,
+  type ProductTypeDto,
+  type WarehouseDto,
+} from '../services/productService'
+import { apiRequest, ApiError } from '../services/apiClient'
 
 interface WarehouseItem {
-  productTypeId: string;
-  quantity: number;
-  cost: number;
+  productTypeId: string
+  quantity: number
+  cost: number
 }
 
 interface WarehousePayload {
-  receiptDate: string;
-  items: WarehouseItem[];
+  receiptDate: string
+  items: WarehouseItem[]
 }
 
 const StockIn = () => {
-  const [stockInList, setStockInList] = useState<WarehouseDto[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [form] = Form.useForm();
-  const [productTypes, setProductTypes] = useState<ProductTypeDto[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [tableLoading, setTableLoading] = useState(false);
+  const [stockInList, setStockInList] = useState<WarehouseDto[]>([])
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [form] = Form.useForm()
+  const [productTypes, setProductTypes] = useState<ProductTypeDto[]>([])
+  const [loading, setLoading] = useState(false)
+  const [tableLoading, setTableLoading] = useState(false)
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
     total: 0,
-  });
+  })
 
   const fetchWarehouses = async (page = 1, limit = 10) => {
     try {
-      setTableLoading(true);
+      setTableLoading(true)
       const response = await listWarehouses({
         page,
         limit,
         sortBy: 'created_at',
         sortOrder: 'desc',
-      });
-      setStockInList(response.data);
+      })
+      setStockInList(response.data)
       setPagination({
         current: response.pagination.page,
         pageSize: response.pagination.limit,
         total: response.pagination.total,
-      });
+      })
     } catch {
-      message.error('Không thể tải danh sách phiếu nhập kho');
+      message.error('Không thể tải danh sách phiếu nhập kho')
     } finally {
-      setTableLoading(false);
+      setTableLoading(false)
     }
-  };
+  }
 
   useEffect(() => {
-    fetchWarehouses();
-  }, []);
+    fetchWarehouses()
+  }, [])
 
   useEffect(() => {
     const fetchProductTypes = async () => {
       try {
-        setLoading(true);
-        const response = await listProductTypes(1, 100);
-        setProductTypes(response.data);
+        setLoading(true)
+        const response = await listProductTypes(1, 100)
+        setProductTypes(response.data)
       } catch {
-        message.error('Không thể tải danh sách loại sản phẩm');
+        message.error('Không thể tải danh sách loại sản phẩm')
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
     if (isModalOpen) {
-      fetchProductTypes();
+      fetchProductTypes()
     }
-  }, [isModalOpen]);
+  }, [isModalOpen])
 
-  const handleSave = async (values: { receiptDate: dayjs.Dayjs; vehicles?: Array<{ productTypeId?: string; quantity?: number; cost?: number }> }) => {
+  const handleSave = async (values: {
+    receiptDate: dayjs.Dayjs
+    vehicles?: Array<{ productTypeId?: string; quantity?: number; cost?: number }>
+  }) => {
     try {
-      const vehicles = values.vehicles || [];
+      const vehicles = values.vehicles || []
       const items: WarehouseItem[] = vehicles
-        .map((vehicle) => {
-          const quantity = Number(vehicle.quantity) || 0;
-          const cost = Number(vehicle.cost) || 0;
+        .map(vehicle => {
+          const quantity = Number(vehicle.quantity) || 0
+          const cost = Number(vehicle.cost) || 0
           if (vehicle.productTypeId && quantity > 0 && cost > 0) {
             return {
               productTypeId: vehicle.productTypeId,
               quantity,
               cost,
-            };
+            }
           }
-          return null;
+          return null
         })
-        .filter((item): item is WarehouseItem => item !== null);
+        .filter((item): item is WarehouseItem => item !== null)
 
       if (items.length === 0) {
-        message.warning('Vui lòng nhập ít nhất một sản phẩm');
-        return;
+        message.warning('Vui lòng nhập ít nhất một sản phẩm')
+        return
       }
 
       const payload: WarehousePayload = {
         receiptDate: values.receiptDate.format('YYYY-MM-DD'),
         items,
-      };
+      }
 
       await apiRequest<{ message: string }>('/warehouses', {
         method: 'POST',
         data: payload,
-      });
+      })
 
-      message.success('Tạo phiếu nhập kho thành công');
-      setIsModalOpen(false);
-      form.resetFields();
-      fetchWarehouses(pagination.current, pagination.pageSize);
+      message.success('Tạo phiếu nhập kho thành công')
+      setIsModalOpen(false)
+      form.resetFields()
+      fetchWarehouses(pagination.current, pagination.pageSize)
     } catch (error) {
-      const errorMessage = error instanceof ApiError ? error.message : 'Có lỗi xảy ra khi tạo phiếu nhập kho';
-      message.error(errorMessage);
+      const errorMessage =
+        error instanceof ApiError ? error.message : 'Có lỗi xảy ra khi tạo phiếu nhập kho'
+      message.error(errorMessage)
     }
-  };
+  }
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('vi-VN').format(price);
-  };
+    return new Intl.NumberFormat('vi-VN').format(price)
+  }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('vi-VN');
-  };
+    return new Date(dateString).toLocaleDateString('vi-VN')
+  }
 
   const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString('vi-VN');
-  };
+    return new Date(dateString).toLocaleString('vi-VN')
+  }
 
   const columns: ColumnsType<WarehouseDto> = [
     {
@@ -139,7 +162,7 @@ const StockIn = () => {
       title: 'Ngày nhập',
       dataIndex: 'receiptDate',
       key: 'receiptDate',
-      render: (date) => formatDate(date),
+      render: date => formatDate(date),
     },
     {
       title: 'Số lượng',
@@ -150,22 +173,32 @@ const StockIn = () => {
       title: 'Ngày tạo',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (date) => formatDateTime(date),
+      render: date => formatDateTime(date),
     },
-  ];
+  ]
 
   return (
     <div>
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: window.innerWidth < 768 ? 'column' : 'row',
-        justifyContent: 'space-between', 
-        alignItems: window.innerWidth < 768 ? 'flex-start' : 'center', 
-        marginBottom: 24,
-        gap: window.innerWidth < 768 ? 16 : 0,
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+          justifyContent: 'space-between',
+          alignItems: window.innerWidth < 768 ? 'flex-start' : 'center',
+          marginBottom: 24,
+          gap: window.innerWidth < 768 ? 16 : 0,
+        }}
+      >
         <div>
-          <h1 style={{ fontSize: window.innerWidth < 576 ? 20 : 24, fontWeight: 'bold', marginBottom: 8 }}>Nhập kho</h1>
+          <h1
+            style={{
+              fontSize: window.innerWidth < 576 ? 20 : 24,
+              fontWeight: 'bold',
+              marginBottom: 8,
+            }}
+          >
+            Nhập kho
+          </h1>
           <p style={{ color: '#666', fontSize: 14 }}>Quản lý phiếu nhập kho và tồn kho</p>
         </div>
         <Button
@@ -182,12 +215,12 @@ const StockIn = () => {
         title="Phiếu nhập kho"
         open={isModalOpen}
         onCancel={() => {
-          setIsModalOpen(false);
-          form.resetFields();
+          setIsModalOpen(false)
+          form.resetFields()
           form.setFieldsValue({
             receiptDate: dayjs(),
             vehicles: [{ quantity: 1, cost: 0 }],
-          });
+          })
         }}
         footer={null}
         width={window.innerWidth < 768 ? '95%' : 800}
@@ -215,10 +248,10 @@ const StockIn = () => {
                 type="default"
                 icon={<PlusOutlined />}
                 onClick={() => {
-                  const vehicles = form.getFieldValue('vehicles') || [];
+                  const vehicles = form.getFieldValue('vehicles') || []
                   form.setFieldsValue({
                     vehicles: [...vehicles, { quantity: 1, cost: 0 }],
-                  });
+                  })
                 }}
                 style={{ borderColor: '#1890ff', color: '#1890ff', backgroundColor: '#e6f7ff' }}
               >
@@ -233,7 +266,7 @@ const StockIn = () => {
             <Form.List name="vehicles">
               {(fields, { remove }) => (
                 <>
-                  {fields.map((field) => (
+                  {fields.map(field => (
                     <Card
                       key={field.key}
                       style={{
@@ -269,7 +302,7 @@ const StockIn = () => {
                             filterOption={(input, option) =>
                               (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
                             }
-                            options={productTypes.map((type) => ({
+                            options={productTypes.map(type => ({
                               value: type.id,
                               label: type.name,
                             }))}
@@ -300,8 +333,10 @@ const StockIn = () => {
                             >
                               <InputNumber<number>
                                 min={0}
-                                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                                parser={(value) => Number((value || '0').replace(/,/g, '')) || 0}
+                                formatter={value =>
+                                  `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                                }
+                                parser={value => Number((value || '0').replace(/,/g, '')) || 0}
                                 style={{ width: '100%' }}
                                 size="large"
                                 placeholder="0"
@@ -309,15 +344,13 @@ const StockIn = () => {
                             </Form.Item>
                           </Col>
                           <Col xs={24} sm={8}>
-                            <Form.Item
-                              label="Thành tiền"
-                              style={{ marginBottom: 16 }}
-                            >
+                            <Form.Item label="Thành tiền" style={{ marginBottom: 16 }}>
                               <Form.Item shouldUpdate noStyle>
                                 {({ getFieldValue }) => {
-                                  const quantity = getFieldValue(['vehicles', field.name, 'quantity']) || 0;
-                                  const cost = getFieldValue(['vehicles', field.name, 'cost']) || 0;
-                                  const total = quantity * cost;
+                                  const quantity =
+                                    getFieldValue(['vehicles', field.name, 'quantity']) || 0
+                                  const cost = getFieldValue(['vehicles', field.name, 'cost']) || 0
+                                  const total = quantity * cost
                                   return (
                                     <Input
                                       value={`${formatPrice(total)} VNĐ`}
@@ -328,7 +361,7 @@ const StockIn = () => {
                                         cursor: 'not-allowed',
                                       }}
                                     />
-                                  );
+                                  )
                                 }}
                               </Form.Item>
                             </Form.Item>
@@ -344,36 +377,44 @@ const StockIn = () => {
 
           <Form.Item shouldUpdate>
             {({ getFieldValue }) => {
-              const vehicles = getFieldValue('vehicles') || [];
-              let totalAmount = 0;
+              const vehicles = getFieldValue('vehicles') || []
+              let totalAmount = 0
               vehicles.forEach((vehicle: { quantity?: number; cost?: number }) => {
-                const quantity = Number(vehicle?.quantity) || 0;
-                const cost = Number(vehicle?.cost) || 0;
-                totalAmount += quantity * cost;
-              });
+                const quantity = Number(vehicle?.quantity) || 0
+                const cost = Number(vehicle?.cost) || 0
+                totalAmount += quantity * cost
+              })
               return totalAmount > 0 ? (
                 <Card style={{ background: '#f0f9ff', marginTop: 16, marginBottom: 16 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
                     <span style={{ fontWeight: 500, fontSize: 16 }}>Tổng tiền:</span>
                     <span style={{ fontSize: 24, fontWeight: 'bold', color: '#1890ff' }}>
                       {formatPrice(totalAmount)} VNĐ
                     </span>
                   </div>
                 </Card>
-              ) : null;
+              ) : null
             }}
           </Form.Item>
 
           <Form.Item style={{ marginTop: 24, marginBottom: 0 }}>
             <Space style={{ float: 'right' }}>
-              <Button onClick={() => {
-                setIsModalOpen(false);
-                form.resetFields();
-                form.setFieldsValue({
-                  receiptDate: dayjs(),
-                  vehicles: [{ quantity: 1, cost: 0 }],
-                });
-              }}>
+              <Button
+                onClick={() => {
+                  setIsModalOpen(false)
+                  form.resetFields()
+                  form.setFieldsValue({
+                    receiptDate: dayjs(),
+                    vehicles: [{ quantity: 1, cost: 0 }],
+                  })
+                }}
+              >
                 Hủy
               </Button>
               <Button type="primary" htmlType="submit" loading={loading}>
@@ -401,12 +442,12 @@ const StockIn = () => {
               pageSize: pagination.pageSize,
               total: pagination.total,
               showSizeChanger: true,
-              showTotal: (total) => `Tổng ${total} phiếu nhập kho`,
+              showTotal: total => `Tổng ${total} phiếu nhập kho`,
               onChange: (page, pageSize) => {
-                fetchWarehouses(page, pageSize);
+                fetchWarehouses(page, pageSize)
               },
               onShowSizeChange: (current, size) => {
-                fetchWarehouses(current, size);
+                fetchWarehouses(current, size)
               },
             }}
             locale={{
@@ -416,7 +457,7 @@ const StockIn = () => {
         </div>
       </Card>
     </div>
-  );
-};
+  )
+}
 
-export default StockIn;
+export default StockIn

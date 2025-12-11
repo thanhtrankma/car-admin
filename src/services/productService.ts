@@ -1,127 +1,126 @@
-import { apiRequest } from './apiClient';
+import { apiRequest } from './apiClient'
 
 export interface ProductDto {
-  id: string;
-  sku: string;
-  code: string;
-  name: string;
-  vehicleType: number;
-  version: string;
-  weight?: string;
-  cc?: string;
-  manufacturedDate?: string;
-  color?: string;
-  chassisNumber?: string;
-  engineNumber?: string;
-  receiptDate?: string;
-  cost: number;
-  price: number;
-  warehouseStatus: number;
-  images?: string[];
-  quantity: number;
-  line?: string;
-  created_at: string;
-  updated_at: string;
+  id: string
+  sku: string
+  code: string
+  name: string
+  vehicleType: number
+  version: string
+  weight?: string
+  cc?: string
+  manufacturedDate?: string
+  color?: string
+  chassisNumber?: string
+  engineNumber?: string
+  receiptDate?: string
+  cost: number
+  price: number
+  warehouseStatus: number
+  images?: string[]
+  quantity: number
+  line?: string
+  created_at: string
+  updated_at: string
   createdBy?: {
-    username: string;
-    email: string;
-    id: string;
-  };
+    username: string
+    email: string
+    id: string
+  }
   updatedBy?: {
-    username: string;
-    email: string;
-    id: string;
-  };
-  deleted_at?: string | null;
-  deletedBy?: string | null;
+    username: string
+    email: string
+    id: string
+  }
+  deleted_at?: string | null
+  deletedBy?: string | null
 }
 
 export interface ListProductsParams {
-  search?: string;
-  warehouseStatus?: number;
-  vehicleType?: number;
-  page?: number;
-  limit?: number;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  search?: string
+  warehouseStatus?: number
+  vehicleType?: number
+  page?: number
+  limit?: number
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
 }
 
 export interface ListProductsResponse {
-  data: ProductDto[];
+  data: ProductDto[]
   pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
 }
 
 export interface ProductPayload {
-  name: string;
-  vehicleType: number;
-  version: string;
-  line?: string;
-  weight?: string;
-  cc?: string;
-  manufacturedDate?: string;
-  color?: string;
-  chassisNumber?: string;
-  engineNumber?: string;
-  receiptDate?: string;
-  cost?: number;
-  price: number;
-  quantity?: number;
-  warehouseStatus: number;
-  images?: string[];
-  productRemainId?: string;
+  name: string
+  vehicleType: number
+  version: string
+  line?: string
+  weight?: string
+  cc?: string
+  manufacturedDate?: string
+  color?: string
+  chassisNumber?: string
+  engineNumber?: string
+  receiptDate?: string
+  cost?: number
+  price: number
+  quantity?: number
+  warehouseStatus: number
+  images?: string[]
+  productRemainId?: string
 }
 
 export interface ProductTypeDto {
-  id: string;
-  name: string;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-  deletedBy: string | null;
+  id: string
+  name: string
+  created_at: string
+  updated_at: string
+  deleted_at: string | null
+  deletedBy: string | null
 }
 
 export interface ListProductTypesResponse {
-  data: ProductTypeDto[];
+  data: ProductTypeDto[]
   pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
 }
 
 export const listProducts = (params?: ListProductsParams) =>
-  apiRequest<ListProductsResponse>('/products', { params });
+  apiRequest<ListProductsResponse>('/products', { params })
 
-export const getProductById = (id: string) =>
-  apiRequest<ProductDto>(`/products/${id}`);
+export const getProductById = (id: string) => apiRequest<ProductDto>(`/products/${id}`)
 
 export const createProduct = (payload: ProductPayload) =>
   apiRequest<ProductDto>('/products', {
     method: 'POST',
     data: payload,
-  });
+  })
 
 export const updateProduct = (id: string, payload: Partial<ProductPayload>) =>
   apiRequest<ProductDto>(`/products/${id}`, {
     method: 'PUT',
     data: payload,
-  });
+  })
 
 export const deleteProduct = (id: string) =>
   apiRequest<{ message: string; product: { id: string } }>(`/products/${id}`, {
     method: 'DELETE',
-  });
+  })
 
 export const uploadProductImages = (files: File[], bucket = 'products') => {
-  const formData = new FormData();
-  files.forEach((file) => formData.append('files', file));
-  formData.append('bucket', bucket);
+  const formData = new FormData()
+  files.forEach(file => formData.append('files', file))
+  formData.append('bucket', bucket)
 
   return apiRequest<string[]>('/multi-files', {
     method: 'POST',
@@ -129,100 +128,97 @@ export const uploadProductImages = (files: File[], bucket = 'products') => {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
-  });
-};
+  })
+}
 
-export const getProductBySku = (sku: string) =>
-  apiRequest<ProductDto>(`/products/sku/${sku}`);
+export const getProductBySku = (sku: string) => apiRequest<ProductDto>(`/products/sku/${sku}`)
 
-export const getProductByCode = (code: string) =>
-  apiRequest<ProductDto>(`/products/code/${code}`);
+export const getProductByCode = (code: string) => apiRequest<ProductDto>(`/products/code/${code}`)
 
 export const listProductTypes = (page = 1, limit = 100) =>
   apiRequest<ListProductTypesResponse>('/product-types', {
     params: { page, limit },
-  });
+  })
 
 export interface WarehouseDto {
-  id: string;
-  publicCode: string;
-  receiptDate: string;
-  quantity: number;
-  createdBy: string;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-  deletedBy: string | null;
+  id: string
+  publicCode: string
+  receiptDate: string
+  quantity: number
+  createdBy: string
+  created_at: string
+  updated_at: string
+  deleted_at: string | null
+  deletedBy: string | null
 }
 
 export interface ListWarehousesParams {
-  page?: number;
-  limit?: number;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  page?: number
+  limit?: number
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
 }
 
 export interface ListWarehousesResponse {
-  data: WarehouseDto[];
+  data: WarehouseDto[]
   pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
 }
 
 export const listWarehouses = (params?: ListWarehousesParams) =>
-  apiRequest<ListWarehousesResponse>('/warehouses', { params });
+  apiRequest<ListWarehousesResponse>('/warehouses', { params })
 
 export interface ProductRemainStateResponse {
-  success: boolean;
+  success: boolean
   data: {
-    totalRemain: number;
-  };
+    totalRemain: number
+  }
 }
 
 export interface ProductRemainDto {
-  id: string;
-  deleted_at: string | null;
-  deletedBy: string | null;
-  wareHouseId: string;
-  productTypeId: string;
-  publicCode: string;
-  code: string;
-  name: string;
-  cost: number;
-  totalCost: number;
-  quantity: number;
-  remain: number;
-  totalProductCreated: number;
-  types: number[];
-  abbreviation: string;
-  createdBy: string;
-  created_at: string;
-  updated_at: string;
+  id: string
+  deleted_at: string | null
+  deletedBy: string | null
+  wareHouseId: string
+  productTypeId: string
+  publicCode: string
+  code: string
+  name: string
+  cost: number
+  totalCost: number
+  quantity: number
+  remain: number
+  totalProductCreated: number
+  types: number[]
+  abbreviation: string
+  createdBy: string
+  created_at: string
+  updated_at: string
 }
 
 export interface ListProductRemainParams {
-  page?: number;
-  limit?: number;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  page?: number
+  limit?: number
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
 }
 
 export interface ListProductRemainResponse {
-  data: ProductRemainDto[];
+  data: ProductRemainDto[]
   pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
 }
 
 export const getProductRemainState = () =>
-  apiRequest<ProductRemainStateResponse>('/product-remain/state');
+  apiRequest<ProductRemainStateResponse>('/product-remain/state')
 
 export const listProductRemain = (params?: ListProductRemainParams) =>
-  apiRequest<ListProductRemainResponse>('/product-remain', { params });
-
+  apiRequest<ListProductRemainResponse>('/product-remain', { params })
