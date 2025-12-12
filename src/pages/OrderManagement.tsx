@@ -203,6 +203,11 @@ const OrderManagement = () => {
     setOrderItems(orderItems.filter(item => item.carCode !== carCode))
   }
 
+  const availableProducts = useMemo(() => {
+    const orderProductIds = new Set(orderItems.map(item => item.productId))
+    return products.filter(product => !orderProductIds.has(product.id))
+  }, [products, orderItems])
+
   const subtotal = orderItems.reduce((sum, item) => sum + item.total, 0)
   const total = subtotal
 
@@ -229,6 +234,7 @@ const OrderManagement = () => {
         setOrderItems([])
         form.resetFields()
         fetchInvoices()
+        fetchProducts()
       })
       .catch(error => {
         const errorMessage = error instanceof Error ? error.message : 'Không thể tạo hóa đơn'
@@ -1083,7 +1089,7 @@ const OrderManagement = () => {
                       }
                     }}
                   >
-                    {products.map(product => {
+                    {availableProducts.map(product => {
                       const infoParts = []
                       if (product.version) infoParts.push(`Phiên bản: ${product.version}`)
                       if (product.color) infoParts.push(`Màu: ${product.color}`)
