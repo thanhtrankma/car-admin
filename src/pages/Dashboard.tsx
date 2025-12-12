@@ -193,7 +193,7 @@ const Dashboard = () => {
               valueStyle={{ fontSize: 16, wordBreak: 'break-word' }}
             />
             <div style={{ marginTop: 8, color: '#1890ff', fontSize: 12 }}>
-              <ShoppingCartOutlined /> 45 đơn đã bán
+              <ShoppingCartOutlined /> 45 chiếc đã bán
             </div>
           </Card>
         </Col>

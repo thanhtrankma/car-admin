@@ -15,13 +15,15 @@ import {
   Col,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { PlusOutlined, InboxOutlined, CloseOutlined } from '@ant-design/icons'
+import { PlusOutlined, InboxOutlined, CloseOutlined, EyeOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import {
   listProductTypes,
   listWarehouses,
+  getWarehouseById,
   type ProductTypeDto,
   type WarehouseDto,
+  type WarehouseDetailDto,
 } from '../services/productService'
 import { apiRequest, ApiError } from '../services/apiClient'
 
@@ -39,6 +41,9 @@ interface WarehousePayload {
 const StockIn = () => {
   const [stockInList, setStockInList] = useState<WarehouseDto[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+  const [warehouseDetail, setWarehouseDetail] = useState<WarehouseDetailDto | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
   const [form] = Form.useForm()
   const [productTypes, setProductTypes] = useState<ProductTypeDto[]>([])
   const [loading, setLoading] = useState(false)
@@ -152,6 +157,21 @@ const StockIn = () => {
     return new Date(dateString).toLocaleString('vi-VN')
   }
 
+  const handleViewDetail = async (id: string) => {
+    try {
+      setDetailLoading(true)
+      const response = await getWarehouseById(id)
+      setWarehouseDetail(response.data)
+      setIsDetailModalOpen(true)
+    } catch (error) {
+      const errorMessage =
+        error instanceof ApiError ? error.message : 'Không thể tải chi tiết phiếu nhập kho'
+      message.error(errorMessage)
+    } finally {
+      setDetailLoading(false)
+    }
+  }
+
   const columns: ColumnsType<WarehouseDto> = [
     {
       title: 'Mã phiếu',
@@ -174,6 +194,19 @@ const StockIn = () => {
       dataIndex: 'created_at',
       key: 'created_at',
       render: date => formatDateTime(date),
+    },
+    {
+      title: 'Thao tác',
+      key: 'action',
+      render: (_, record) => (
+        <Button
+          type="link"
+          icon={<EyeOutlined />}
+          onClick={() => handleViewDetail(record.id)}
+        >
+          Xem chi tiết
+        </Button>
+      ),
     },
   ]
 
@@ -456,6 +489,139 @@ const StockIn = () => {
           />
         </div>
       </Card>
+
+      <Modal
+        title="Chi tiết phiếu nhập kho"
+        open={isDetailModalOpen}
+        onCancel={() => {
+          setIsDetailModalOpen(false)
+          setWarehouseDetail(null)
+        }}
+        footer={[
+          <Button key="close" onClick={() => {
+            setIsDetailModalOpen(false)
+            setWarehouseDetail(null)
+          }}>
+            Đóng
+          </Button>,
+        ]}
+        width={window.innerWidth < 768 ? '95%' : 900}
+      >
+        {detailLoading ? (
+          <div style={{ textAlign: 'center', padding: 40 }}>Đang tải...</div>
+        ) : warehouseDetail ? (
+          <div>
+            <Card style={{ marginBottom: 16 }}>
+              <Row gutter={[16, 16]}>
+                <Col xs={24} sm={12}>
+                  <div>
+                    <strong>Mã phiếu:</strong> {warehouseDetail.publicCode}
+                  </div>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <div>
+                    <strong>Ngày nhập:</strong> {formatDate(warehouseDetail.receiptDate)}
+                  </div>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <div>
+                    <strong>Tổng số lượng:</strong> {warehouseDetail.quantity}
+                  </div>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <div>
+                    <strong>Người tạo:</strong> {warehouseDetail.createdBy.username} ({warehouseDetail.createdBy.email})
+                  </div>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <div>
+                    <strong>Ngày tạo:</strong> {formatDateTime(warehouseDetail.created_at)}
+                  </div>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <div>
+                    <strong>Cập nhật lần cuối:</strong> {formatDateTime(warehouseDetail.updated_at)}
+                  </div>
+                </Col>
+              </Row>
+            </Card>
+
+            <div style={{ marginBottom: 16 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 12 }}>
+                Chi tiết sản phẩm
+              </h3>
+            </div>
+
+            {warehouseDetail.warehouseDetails && warehouseDetail.warehouseDetails.length > 0 ? (
+              <div style={{ overflowX: 'auto' }}>
+                <Table
+                  columns={[
+                    {
+                      title: 'Mã sản phẩm',
+                      dataIndex: 'code',
+                      key: 'code',
+                    },
+                    {
+                      title: 'Tên sản phẩm',
+                      dataIndex: 'name',
+                      key: 'name',
+                    },
+                    {
+                      title: 'Số lượng',
+                      dataIndex: 'quantity',
+                      key: 'quantity',
+                    },
+                    {
+                      title: 'Giá nhập',
+                      dataIndex: 'cost',
+                      key: 'cost',
+                      render: (cost: number) => `${formatPrice(cost)} VNĐ`,
+                    },
+                    {
+                      title: 'Thành tiền',
+                      dataIndex: 'totalCost',
+                      key: 'totalCost',
+                      render: (totalCost: number) => `${formatPrice(totalCost)} VNĐ`,
+                    },
+                    {
+                      title: 'Tồn kho',
+                      dataIndex: 'remain',
+                      key: 'remain',
+                    },
+                    {
+                      title: 'Đã tạo sản phẩm',
+                      dataIndex: 'totalProductCreated',
+                      key: 'totalProductCreated',
+                    },
+                  ]}
+                  dataSource={warehouseDetail.warehouseDetails}
+                  rowKey="id"
+                  pagination={false}
+                  size="small"
+                />
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: 20, color: '#999' }}>
+                Không có chi tiết sản phẩm
+              </div>
+            )}
+
+            {warehouseDetail.warehouseDetails && warehouseDetail.warehouseDetails.length > 0 && (
+              <Card style={{ marginTop: 16, background: '#f0f9ff' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontWeight: 500, fontSize: 16 }}>Tổng giá trị:</span>
+                  <span style={{ fontSize: 20, fontWeight: 'bold', color: '#1890ff' }}>
+                    {formatPrice(
+                      warehouseDetail.warehouseDetails.reduce((sum, item) => sum + item.totalCost, 0)
+                    )}{' '}
+                    VNĐ
+                  </span>
+                </div>
+              </Card>
+            )}
+          </div>
+        ) : null}
+      </Modal>
     </div>
   )
 }

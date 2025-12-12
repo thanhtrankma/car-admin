@@ -172,6 +172,59 @@ export interface ListWarehousesResponse {
 export const listWarehouses = (params?: ListWarehousesParams) =>
   apiRequest<ListWarehousesResponse>('/warehouses', { params })
 
+export interface WarehouseDetailDto {
+  id: string
+  publicCode: string
+  receiptDate: string
+  quantity: number
+  createdBy: {
+    username: string
+    email: string
+    id: string
+  }
+  created_at: string
+  updated_at: string
+  deleted_at: string | null
+  deletedBy: string | null
+  warehouseDetails: Array<{
+    id: string
+    wareHouseId: string
+    productTypeId: {
+      name: string
+      code: string
+      id: string
+    }
+    publicCode: string
+    code: string
+    name: string
+    cost: number
+    totalCost: number
+    quantity: number
+    remain: number
+    totalProductCreated: number
+    types: number[]
+    abbreviation: string
+    createdBy: {
+      username: string
+      email: string
+      id: string
+    }
+    created_at: string
+    updated_at: string
+    deleted_at: string | null
+    deletedBy: string | null
+  }>
+}
+
+export interface WarehouseDetailResponse {
+  success: boolean
+  message: string
+  data: WarehouseDetailDto
+}
+
+export const getWarehouseById = (id: string) =>
+  apiRequest<WarehouseDetailResponse>(`/warehouses/${id}`)
+
 export interface ProductRemainStateResponse {
   success: boolean
   data: {

@@ -284,7 +284,7 @@ const EditCar = () => {
                     <Form.Item
                       label="Phiên bản"
                       name="version"
-                      rules={[{ required: true, message: 'Vui lòng chọn phiên bản' }]}
+                      // rules={[{ required: true, message: 'Vui lòng chọn phiên bản' }]}
                     >
                       <Select placeholder="Chọn phiên bản" size="large">
                         {VERSION_OPTIONS.map(version => (

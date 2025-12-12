@@ -24,31 +24,43 @@ const Reports = () => {
     { month: 'Tháng 6', revenue: 2800000000 },
   ]
 
-  const dailyRevenue: DailyRevenue[] = [
-    { day: 'Ngày 1', revenue: 95000000 },
-    { day: 'Ngày 2', revenue: 120000000 },
-    { day: 'Ngày 3', revenue: 85000000 },
-    { day: 'Ngày 4', revenue: 110000000 },
-    { day: 'Ngày 5', revenue: 130000000 },
-    { day: 'Ngày 6', revenue: 105000000 },
-  ]
+  // Generate daily revenue data with actual dates (today and 6 previous days)
+  const generateDailyRevenue = (): DailyRevenue[] => {
+    const today = new Date()
+    const revenues = [100000000, 95000000, 120000000, 85000000, 110000000, 105000000, 130000000]
+    
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(today)
+      date.setDate(today.getDate() - index) // index 0 = today, index 1 = yesterday, etc.
+      const day = date.getDate()
+      const month = date.getMonth() + 1
+      const formattedDate = `${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}`
+      
+      return {
+        day: formattedDate,
+        revenue: revenues[index],
+      }
+    })
+  }
+
+  const dailyRevenue: DailyRevenue[] = generateDailyRevenue()
 
   const topSellingCars = [
-    { name: 'Honda Vision 2025', sales: 45, revenue: 1462050000 },
-    { name: 'Honda SH Mode 2025', sales: 38, revenue: 2217300000 },
-    { name: 'Air Blade', sales: 32, revenue: 1446080000 },
-    { name: 'Wave Alpha 110', sales: 28, revenue: 542640000 },
-    { name: 'Winner X', sales: 25, revenue: 1205250000 },
+    { name: 'Honda Vision 2025', version: '2025', color: 'Trắng', sales: 45, revenue: 1462050000 },
+    { name: 'Honda SH Mode 2025', version: '2025', color: 'Đen', sales: 38, revenue: 2217300000 },
+    { name: 'Air Blade', version: '2024', color: 'Xám', sales: 32, revenue: 1446080000 },
+    { name: 'Wave Alpha 110', version: '2025', color: 'Đỏ', sales: 28, revenue: 542640000 },
+    { name: 'Winner X', version: '2025', color: 'Xanh', sales: 25, revenue: 1205250000 },
   ]
 
   const inventoryData = [
-    { code: 'H001', name: 'Wave Alpha', type: 'Xe số', quantity: 10, status: 'Còn hàng' },
-    { code: 'H002', name: 'Vision', type: 'Xe tay ga', quantity: 8, status: 'Còn hàng' },
-    { code: 'H003', name: 'SH Mode', type: 'Xe tay ga', quantity: 5, status: 'Còn hàng' },
-    { code: 'H004', name: 'Air Blade', type: 'Xe tay ga', quantity: 3, status: 'Còn hàng' },
-    { code: 'H005', name: 'Winner X', type: 'Xe côn tay', quantity: 0, status: 'Hết hàng' },
-    { code: 'H006', name: 'Lead', type: 'Xe tay ga', quantity: 2, status: 'Còn hàng' },
-    { code: 'H007', name: 'SH 150i', type: 'Xe tay ga', quantity: 1, status: 'Còn hàng' },
+    { code: 'H001', name: 'Wave Alpha', type: 'Xe số', version: '2025', color: 'Đỏ', quantity: 10, status: 'Còn hàng' },
+    { code: 'H002', name: 'Vision', type: 'Xe tay ga', version: '2025', color: 'Trắng', quantity: 8, status: 'Còn hàng' },
+    { code: 'H003', name: 'SH Mode', type: 'Xe tay ga', version: '2025', color: 'Đen', quantity: 5, status: 'Còn hàng' },
+    { code: 'H004', name: 'Air Blade', type: 'Xe tay ga', version: '2024', color: 'Xám', quantity: 3, status: 'Còn hàng' },
+    { code: 'H005', name: 'Winner X', type: 'Xe côn tay', version: '2025', color: 'Xanh', quantity: 0, status: 'Hết hàng' },
+    { code: 'H006', name: 'Lead', type: 'Xe tay ga', version: '2024', color: 'Trắng', quantity: 2, status: 'Còn hàng' },
+    { code: 'H007', name: 'SH 150i', type: 'Xe tay ga', version: '2025', color: 'Đỏ', quantity: 1, status: 'Còn hàng' },
   ]
 
   const formatPrice = (price: number) => {
@@ -79,6 +91,16 @@ const Reports = () => {
       key: 'name',
     },
     {
+      title: 'Phiên bản',
+      dataIndex: 'version',
+      key: 'version',
+    },
+    {
+      title: 'Màu sắc',
+      dataIndex: 'color',
+      key: 'color',
+    },
+    {
       title: 'Số lượng bán',
       dataIndex: 'sales',
       key: 'sales',
@@ -107,6 +129,16 @@ const Reports = () => {
       title: 'Loại xe',
       dataIndex: 'type',
       key: 'type',
+    },
+    {
+      title: 'Phiên bản',
+      dataIndex: 'version',
+      key: 'version',
+    },
+    {
+      title: 'Màu',
+      dataIndex: 'color',
+      key: 'color',
     },
     {
       title: 'Số lượng tồn',
@@ -179,13 +211,11 @@ const Reports = () => {
                   value={totalRevenue}
                   formatter={value => formatPrice(Number(value)) + ' VNĐ'}
                   prefix={<DollarOutlined />}
-                  suffix={
-                    <span style={{ color: '#52c41a', fontSize: 12 }}>
-                      <ArrowUpOutlined /> +15.2%
-                    </span>
-                  }
                   valueStyle={{ color: '#3f8600' }}
                 />
+                <div style={{ marginTop: 8, fontSize: 12, color: '#52c41a' }}>
+                  <ArrowUpOutlined /> +15.2% so với {timeRange === 'month' ? 'tháng trước' : 'ngày trước'}
+                </div>
               </Card>
             </Col>
             <Col xs={24} sm={12} lg={6}>
@@ -194,13 +224,11 @@ const Reports = () => {
                   title="Số lượng xe bán ra"
                   value={totalCarsSold}
                   prefix={<CarOutlined />}
-                  suffix={
-                    <span style={{ color: '#52c41a', fontSize: 12 }}>
-                      <ArrowUpOutlined /> +12.5%
-                    </span>
-                  }
                   valueStyle={{ color: '#1890ff' }}
                 />
+                <div style={{ marginTop: 8, fontSize: 12, color: '#52c41a' }}>
+                  <ArrowUpOutlined /> +12.5% so với {timeRange === 'month' ? 'tháng trước' : 'ngày trước'}
+                </div>
               </Card>
             </Col>
             <Col xs={24} sm={12} lg={6}>
@@ -209,13 +237,14 @@ const Reports = () => {
                   title="Xe bán chạy nhất"
                   value={topSellingCars[0]?.name || '-'}
                   prefix={<ShoppingCartOutlined />}
-                  suffix={
-                    <span style={{ fontSize: 14, color: '#1890ff' }}>
-                      {topSellingCars[0]?.sales || 0} đơn
-                    </span>
-                  }
                   valueStyle={{ fontSize: 18, wordBreak: 'break-word', color: '#1890ff' }}
                 />
+                <div style={{ marginTop: 8, fontSize: 12, color: '#1890ff' }}>
+                  {topSellingCars[0]?.sales || 0} đơn
+                </div>
+                {/* <div style={{ marginTop: 4, fontSize: 12, color: '#52c41a' }}>
+                  <ArrowUpOutlined /> +8.3% so với {timeRange === 'month' ? 'tháng trước' : 'ngày trước'}
+                </div> */}
               </Card>
             </Col>
             <Col xs={24} sm={12} lg={6}>
@@ -225,13 +254,11 @@ const Reports = () => {
                   value={totalRevenue / normalizedRevenueData.length}
                   formatter={value => formatPrice(Number(value)) + ' VNĐ'}
                   prefix={<CalendarOutlined />}
-                  suffix={
-                    <span style={{ color: '#52c41a', fontSize: 12 }}>
-                      <ArrowUpOutlined /> +10.1%
-                    </span>
-                  }
                   valueStyle={{ color: '#fa8c16' }}
                 />
+                <div style={{ marginTop: 8, fontSize: 12, color: '#52c41a' }}>
+                  <ArrowUpOutlined /> +10.1% so với {timeRange === 'month' ? 'tháng trước' : 'ngày trước'}
+                </div>
               </Card>
             </Col>
           </Row>
@@ -284,7 +311,7 @@ const Reports = () => {
             <Col xs={24} sm={8}>
               <Card>
                 <Statistic
-                  title="Tổng số loại xe"
+                  title="Tổng số xe"
                   value={inventoryData.length}
                   valueStyle={{ color: '#1890ff' }}
                 />
