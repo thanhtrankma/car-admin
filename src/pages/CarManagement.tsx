@@ -31,6 +31,7 @@ import {
   getProductRemainState,
   listProductRemain,
 } from '../services/productService'
+import { formatImageUrl } from '../utils/imageUtils'
 
 const { Option } = Select
 
@@ -75,8 +76,6 @@ const formatDateTime = (value?: string) => {
     return value
   }
 }
-
-import { formatImageUrl } from '../utils/imageUtils'
 
 const mapProductToCar = (product: ProductDto): Car => ({
   id: product.id,

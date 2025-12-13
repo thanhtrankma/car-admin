@@ -69,6 +69,7 @@ const COLOR_OPTIONS = [
   'Bạc',
 ]
 
+const normalizeImageUrl = formatImageUrl
 
 interface CarFormValues {
   name: string
@@ -128,7 +129,7 @@ const EditCar = () => {
             uid: `${index}`,
             name: url,
             status: 'done',
-            url: formatImageUrl(url),
+            url: normalizeImageUrl(url),
             response: url,
           })) as UploadFile[]
         )

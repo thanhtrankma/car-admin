@@ -89,6 +89,8 @@ interface AddCarFormValues {
   warehouseStatus: number
 }
 
+const normalizeImageUrl = formatImageUrl
+
 const AddCar = () => {
   const navigate = useNavigate()
   const { code } = useParams<{ code?: string }>()
@@ -217,7 +219,7 @@ const AddCar = () => {
             uid: `${index}`,
             name: url,
             status: 'done',
-            url: formatImageUrl(url),
+            url: normalizeImageUrl(url),
             response: url,
           })) as UploadFile[]
         )
