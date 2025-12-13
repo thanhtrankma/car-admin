@@ -15,6 +15,7 @@ import {
   Carousel,
 } from 'antd'
 import { getProductById, type ProductDto } from '../services/productService'
+import { formatImageUrl } from '../utils/imageUtils'
 
 const VEHICLE_TYPE_LABELS: Record<number, string> = {
   1: 'Xe tay ga',
@@ -27,12 +28,6 @@ const WAREHOUSE_STATUS_META: Record<number, { label: string; color: string }> = 
   2: { label: 'Hết hàng', color: 'red' },
   3: { label: 'Sắp về', color: 'blue' },
   4: { label: 'Đang bảo hành', color: 'orange' },
-}
-
-const formatImageUrl = (url: string) => {
-  if (!url) return ''
-  if (/^https?:\/\//i.test(url)) return url
-  return `http://${url}`
 }
 
 const CarDetail = () => {

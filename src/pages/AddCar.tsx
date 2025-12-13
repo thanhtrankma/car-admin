@@ -27,6 +27,7 @@ import {
   listProductTypes,
   type ProductTypeDto,
 } from '../services/productService'
+import { formatImageUrl } from '../utils/imageUtils'
 
 const { Option } = Select
 
@@ -86,12 +87,6 @@ interface AddCarFormValues {
   price?: number
   quantity?: number
   warehouseStatus: number
-}
-
-const normalizeImageUrl = (url: string) => {
-  if (!url) return ''
-  if (/^https?:\/\//i.test(url)) return url
-  return `http://${url}`
 }
 
 const AddCar = () => {
@@ -222,7 +217,7 @@ const AddCar = () => {
             uid: `${index}`,
             name: url,
             status: 'done',
-            url: normalizeImageUrl(url),
+            url: formatImageUrl(url),
             response: url,
           })) as UploadFile[]
         )

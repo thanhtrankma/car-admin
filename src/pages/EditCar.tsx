@@ -23,6 +23,7 @@ import {
   uploadProductImages,
   type ProductDto,
 } from '../services/productService'
+import { formatImageUrl } from '../utils/imageUtils'
 
 const { Text } = Typography
 const { Option } = Select
@@ -68,11 +69,6 @@ const COLOR_OPTIONS = [
   'Bạc',
 ]
 
-const normalizeImageUrl = (url: string) => {
-  if (!url) return ''
-  if (/^https?:\/\//i.test(url)) return url
-  return `http://${url}`
-}
 
 interface CarFormValues {
   name: string
@@ -132,7 +128,7 @@ const EditCar = () => {
             uid: `${index}`,
             name: url,
             status: 'done',
-            url: normalizeImageUrl(url),
+            url: formatImageUrl(url),
             response: url,
           })) as UploadFile[]
         )

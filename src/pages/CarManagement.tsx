@@ -76,38 +76,7 @@ const formatDateTime = (value?: string) => {
   }
 }
 
-const formatImageUrl = (url?: string) => {
-  if (!url) return ''
-
-  // Trim whitespace
-  const trimmedUrl = url.trim()
-
-  // If already has protocol, return as is (but ensure proper encoding)
-  if (/^https?:\/\//i.test(trimmedUrl)) {
-    try {
-      // Try to parse and reconstruct URL to ensure proper encoding
-      const urlObj = new URL(trimmedUrl)
-      return urlObj.toString()
-    } catch {
-      // If URL parsing fails, return as is
-      return trimmedUrl
-    }
-  }
-
-  // If starts with //, add http:
-  if (trimmedUrl.startsWith('//')) {
-    return `http:${trimmedUrl}`
-  }
-
-  // If starts with /, it's a relative path - might need base URL
-  // For now, assume it needs http:// prefix
-  if (trimmedUrl.startsWith('/')) {
-    return `http://${trimmedUrl.substring(1)}`
-  }
-
-  // Otherwise, add http:// prefix
-  return `http://${trimmedUrl}`
-}
+import { formatImageUrl } from '../utils/imageUtils'
 
 const mapProductToCar = (product: ProductDto): Car => ({
   id: product.id,

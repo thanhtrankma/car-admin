@@ -5,6 +5,10 @@
       "destination": "http://171.244.43.84:9004/honda/:path*"
     },
     {
+      "source": "/images/:path*",
+      "destination": "http://171.244.43.84:9000/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
