@@ -34,8 +34,23 @@ export const formatImageUrl = (url?: string): string => {
     return url
   }
 
+  // If URL doesn't have protocol, check if it starts with image server address
+  const imageServerPatternNoProtocol = /^171\.244\.43\.84:9000\/(.+)$/i
+  const matchNoProtocol = url.match(imageServerPatternNoProtocol)
+
+  if (matchNoProtocol) {
+    // Convert to proxy path: /images/{rest of path}
+    return `/images/${matchNoProtocol[1]}`
+  }
+
   // If URL doesn't have protocol, check if it's already a proxy path
   if (url.startsWith('/images/')) {
+    // Fix incorrectly formatted URLs like /images/171.244.43.84:9000/products/...
+    const incorrectPattern = /^\/images\/171\.244\.43\.84:9000\/(.+)$/i
+    const incorrectMatch = url.match(incorrectPattern)
+    if (incorrectMatch) {
+      return `/images/${incorrectMatch[1]}`
+    }
     return url
   }
 
