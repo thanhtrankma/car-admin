@@ -41,6 +41,7 @@ interface Car {
   name: string
   type: string
   version: string
+  color?: string
   createdAt: string
   costPrice: number
   sellingPrice: number
@@ -77,8 +78,35 @@ const formatDateTime = (value?: string) => {
 
 const formatImageUrl = (url?: string) => {
   if (!url) return ''
-  if (/^https?:\/\//i.test(url)) return url
-  return `http://${url}`
+
+  // Trim whitespace
+  const trimmedUrl = url.trim()
+
+  // If already has protocol, return as is (but ensure proper encoding)
+  if (/^https?:\/\//i.test(trimmedUrl)) {
+    try {
+      // Try to parse and reconstruct URL to ensure proper encoding
+      const urlObj = new URL(trimmedUrl)
+      return urlObj.toString()
+    } catch {
+      // If URL parsing fails, return as is
+      return trimmedUrl
+    }
+  }
+
+  // If starts with //, add http:
+  if (trimmedUrl.startsWith('//')) {
+    return `http:${trimmedUrl}`
+  }
+
+  // If starts with /, it's a relative path - might need base URL
+  // For now, assume it needs http:// prefix
+  if (trimmedUrl.startsWith('/')) {
+    return `http://${trimmedUrl.substring(1)}`
+  }
+
+  // Otherwise, add http:// prefix
+  return `http://${trimmedUrl}`
 }
 
 const mapProductToCar = (product: ProductDto): Car => ({
@@ -88,6 +116,7 @@ const mapProductToCar = (product: ProductDto): Car => ({
   name: product.name,
   type: VEHICLE_TYPE_LABELS[product.vehicleType] ?? `Loại ${product.vehicleType}`,
   version: product.version,
+  color: product.color,
   createdAt: formatDateTime(product.created_at),
   costPrice: product.cost,
   sellingPrice: product.price,
@@ -233,7 +262,6 @@ const CarManagement = () => {
       width: 80,
       render: (images: string[] | undefined, record) => {
         const firstImage = formatImageUrl(images?.[0])
-        console.log('record', record)
 
         if (!firstImage) {
           return <div style={{ width: 48, height: 48, background: '#f5f5f5', borderRadius: 8 }} />
@@ -271,6 +299,11 @@ const CarManagement = () => {
       key: 'version',
     },
     {
+      title: 'Màu',
+      dataIndex: 'color',
+      key: 'color',
+    },
+    {
       title: 'Thời gian tạo',
       dataIndex: 'createdAt',
       key: 'createdAt',
@@ -297,11 +330,6 @@ const CarManagement = () => {
           : undefined
         return <Tag color={meta?.color ?? 'default'}>{status}</Tag>
       },
-    },
-    {
-      title: 'Số lượng',
-      dataIndex: 'quantity',
-      key: 'quantity',
     },
     {
       title: 'Thao tác',

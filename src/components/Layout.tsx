@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo, type ReactNode } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Layout as AntLayout, Menu, Button, Drawer, Avatar, Tooltip } from 'antd';
-import type { MenuProps } from 'antd';
+import { useState, useEffect, useMemo, type ReactNode } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { Layout as AntLayout, Menu, Button, Drawer, Tooltip, Avatar } from 'antd'
+import type { MenuProps } from 'antd'
 import {
   DashboardOutlined,
   CarOutlined,
@@ -11,57 +11,56 @@ import {
   BarChartOutlined,
   LogoutOutlined,
   MenuOutlined,
-  IdcardOutlined,
   TeamOutlined,
-} from '@ant-design/icons';
+} from '@ant-design/icons'
 
-const { Header, Sider, Content } = AntLayout;
+const { Header, Sider, Content } = AntLayout
 
 interface LayoutProps {
-  children: ReactNode;
-  onLogout: () => void;
+  children: ReactNode
+  onLogout: () => void
 }
 
 const Layout = ({ children, onLogout }: LayoutProps) => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 992);
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [collapsed, setCollapsed] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 992)
   const [currentUser, setCurrentUser] = useState(() => {
     try {
-      const stored = localStorage.getItem('currentUser');
-      return stored ? JSON.parse(stored) : null;
+      const stored = localStorage.getItem('currentUser')
+      return stored ? JSON.parse(stored) : null
     } catch {
-      return null;
+      return null
     }
-  });
+  })
 
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 992);
+      setIsMobile(window.innerWidth < 992)
       if (window.innerWidth >= 992) {
-        setMobileMenuOpen(false);
+        setMobileMenuOpen(false)
       }
-    };
+    }
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   useEffect(() => {
     const handleStorage = (event: StorageEvent) => {
       if (event.key === 'currentUser') {
         try {
-          setCurrentUser(event.newValue ? JSON.parse(event.newValue) : null);
+          setCurrentUser(event.newValue ? JSON.parse(event.newValue) : null)
         } catch {
-          setCurrentUser(null);
+          setCurrentUser(null)
         }
       }
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
+    }
+    window.addEventListener('storage', handleStorage)
+    return () => window.removeEventListener('storage', handleStorage)
+  }, [])
 
   const menuItems = useMemo<MenuProps['items']>(() => {
     const items: MenuProps['items'] = [
@@ -104,29 +103,29 @@ const Layout = ({ children, onLogout }: LayoutProps) => {
         icon: <BarChartOutlined />,
         label: 'Báo cáo',
       },
-      {
-        key: '/profile',
-        icon: <IdcardOutlined />,
-        label: 'Thông tin cá nhân',
-      },
-    ];
-    return items;
-  }, [currentUser?.role]);
+      // {
+      //   key: '/profile',
+      //   icon: <IdcardOutlined />,
+      //   label: 'Thông tin cá nhân',
+      // },
+    ]
+    return items
+  }, [currentUser?.role])
 
   const getSelectedKeys = () => {
     if (location.pathname === '/dashboard' || location.pathname === '/') {
-      return ['/dashboard'];
+      return ['/dashboard']
     }
     if (location.pathname.startsWith('/cars')) {
-      return ['/cars'];
+      return ['/cars']
     }
-    return [location.pathname];
-  };
+    return [location.pathname]
+  }
 
-  const handleMenuClick: MenuProps['onClick'] = (e) => {
-    navigate(e.key);
-    setMobileMenuOpen(false);
-  };
+  const handleMenuClick: MenuProps['onClick'] = e => {
+    navigate(e.key)
+    setMobileMenuOpen(false)
+  }
 
   const menuContent = (
     <Menu
@@ -136,7 +135,7 @@ const Layout = ({ children, onLogout }: LayoutProps) => {
       onClick={handleMenuClick}
       style={{ border: 'none', height: '100%' }}
     />
-  );
+  )
 
   return (
     <AntLayout style={{ minHeight: '100vh' }}>
@@ -157,61 +156,59 @@ const Layout = ({ children, onLogout }: LayoutProps) => {
           }}
           theme="light"
           trigger={null}
-          >
-        <div style={{ padding: 16, borderBottom: '1px solid #f0f0f0' }}>
-          {!collapsed && (
-            <>
-              <h1 style={{ 
-                fontSize: 20, 
-                fontWeight: 'bold', 
-                margin: 0,
-                background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}>
-                Honda Head T&H
-              </h1>
-              <p style={{ fontSize: 12, color: '#999', margin: '4px 0 0 0' }}>
-                Quản lý bán hàng
-              </p>
-            </>
-          )}
-        </div>
-        <div style={{ flex: 1, overflow: 'auto' }}>
-          {menuContent}
-        </div>
-        <div style={{ padding: 16, borderTop: '1px solid #f0f0f0' }}>
-          <Button
-            type="text"
-            danger
-            icon={<LogoutOutlined />}
-            onClick={onLogout}
-            block
-            style={{ textAlign: 'left', height: 40 }}
-          >
-            {!collapsed && 'Đăng xuất'}
-          </Button>
-        </div>
-      </Sider>
+        >
+          <div style={{ padding: 16, borderBottom: '1px solid #f0f0f0' }}>
+            {!collapsed && (
+              <>
+                <h1
+                  style={{
+                    fontSize: 20,
+                    fontWeight: 'bold',
+                    margin: 0,
+                    background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}
+                >
+                  Honda Head T&H
+                </h1>
+                <p style={{ fontSize: 12, color: '#999', margin: '4px 0 0 0' }}>Quản lý bán hàng</p>
+              </>
+            )}
+          </div>
+          <div style={{ flex: 1, overflow: 'auto' }}>{menuContent}</div>
+          <div style={{ padding: 16, borderTop: '1px solid #f0f0f0' }}>
+            <Button
+              type="text"
+              danger
+              icon={<LogoutOutlined />}
+              onClick={onLogout}
+              block
+              style={{ textAlign: 'left', height: 40 }}
+            >
+              {!collapsed && 'Đăng xuất'}
+            </Button>
+          </div>
+        </Sider>
       )}
 
       {/* Mobile Drawer */}
       <Drawer
         title={
           <div>
-            <h1 style={{ 
-              fontSize: 20, 
-              fontWeight: 'bold', 
-              margin: 0,
-              background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}>
+            <h1
+              style={{
+                fontSize: 20,
+                fontWeight: 'bold',
+                margin: 0,
+                background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
               Honda Head T&H
             </h1>
-            <p style={{ fontSize: 12, color: '#999', margin: '4px 0 0 0' }}>
-              Quản lý bán hàng
-            </p>
+            <p style={{ fontSize: 12, color: '#999', margin: '4px 0 0 0' }}>Quản lý bán hàng</p>
           </div>
         }
         placement="left"
@@ -220,24 +217,19 @@ const Layout = ({ children, onLogout }: LayoutProps) => {
         bodyStyle={{ padding: 0 }}
         width={256}
         extra={
-          <Button
-            type="text"
-            danger
-            icon={<LogoutOutlined />}
-            onClick={onLogout}
-          >
+          <Button type="text" danger icon={<LogoutOutlined />} onClick={onLogout}>
             Đăng xuất
           </Button>
         }
-        >
+      >
         {menuContent}
       </Drawer>
 
       {/* Main Layout */}
-      <AntLayout 
-        style={{ 
-          marginLeft: isMobile ? 0 : (collapsed ? 80 : 256), 
-          transition: 'margin-left 0.2s' 
+      <AntLayout
+        style={{
+          marginLeft: isMobile ? 0 : collapsed ? 80 : 256,
+          transition: 'margin-left 0.2s',
         }}
       >
         <Header
@@ -257,9 +249,9 @@ const Layout = ({ children, onLogout }: LayoutProps) => {
             icon={<MenuOutlined />}
             onClick={() => {
               if (isMobile) {
-                setMobileMenuOpen(true);
+                setMobileMenuOpen(true)
               } else {
-                setCollapsed(!collapsed);
+                setCollapsed(!collapsed)
               }
             }}
             style={{
@@ -274,7 +266,9 @@ const Layout = ({ children, onLogout }: LayoutProps) => {
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
             {!isMobile && currentUser && (
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontWeight: 600 }}>{currentUser.fullName || currentUser.username}</div>
+                <div style={{ fontWeight: 600 }}>
+                  {currentUser.fullName || currentUser.username}
+                </div>
               </div>
             )}
             <Tooltip title="Thông tin cá nhân">
@@ -304,7 +298,7 @@ const Layout = ({ children, onLogout }: LayoutProps) => {
         </Content>
       </AntLayout>
     </AntLayout>
-  );
-};
+  )
+}
 
-export default Layout;
+export default Layout
