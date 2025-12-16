@@ -28,14 +28,14 @@ const Reports = () => {
   const generateDailyRevenue = (): DailyRevenue[] => {
     const today = new Date()
     const revenues = [100000000, 95000000, 120000000, 85000000, 110000000, 105000000, 130000000]
-    
+
     return Array.from({ length: 7 }, (_, index) => {
       const date = new Date(today)
       date.setDate(today.getDate() - index) // index 0 = today, index 1 = yesterday, etc.
       const day = date.getDate()
       const month = date.getMonth() + 1
       const formattedDate = `${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}`
-      
+
       return {
         day: formattedDate,
         revenue: revenues[index],
@@ -54,13 +54,69 @@ const Reports = () => {
   ]
 
   const inventoryData = [
-    { code: 'H001', name: 'Wave Alpha', type: 'Xe số', version: '2025', color: 'Đỏ', quantity: 10, status: 'Còn hàng' },
-    { code: 'H002', name: 'Vision', type: 'Xe tay ga', version: '2025', color: 'Trắng', quantity: 8, status: 'Còn hàng' },
-    { code: 'H003', name: 'SH Mode', type: 'Xe tay ga', version: '2025', color: 'Đen', quantity: 5, status: 'Còn hàng' },
-    { code: 'H004', name: 'Air Blade', type: 'Xe tay ga', version: '2024', color: 'Xám', quantity: 3, status: 'Còn hàng' },
-    { code: 'H005', name: 'Winner X', type: 'Xe côn tay', version: '2025', color: 'Xanh', quantity: 0, status: 'Hết hàng' },
-    { code: 'H006', name: 'Lead', type: 'Xe tay ga', version: '2024', color: 'Trắng', quantity: 2, status: 'Còn hàng' },
-    { code: 'H007', name: 'SH 150i', type: 'Xe tay ga', version: '2025', color: 'Đỏ', quantity: 1, status: 'Còn hàng' },
+    {
+      code: 'H001',
+      name: 'Wave Alpha',
+      type: 'Xe số',
+      version: '2025',
+      color: 'Đỏ',
+      quantity: 10,
+      status: 'Còn hàng',
+    },
+    {
+      code: 'H002',
+      name: 'Vision',
+      type: 'Xe tay ga',
+      version: '2025',
+      color: 'Trắng',
+      quantity: 8,
+      status: 'Còn hàng',
+    },
+    {
+      code: 'H003',
+      name: 'SH Mode',
+      type: 'Xe tay ga',
+      version: '2025',
+      color: 'Đen',
+      quantity: 5,
+      status: 'Còn hàng',
+    },
+    {
+      code: 'H004',
+      name: 'Air Blade',
+      type: 'Xe tay ga',
+      version: '2024',
+      color: 'Xám',
+      quantity: 3,
+      status: 'Còn hàng',
+    },
+    {
+      code: 'H005',
+      name: 'Winner X',
+      type: 'Xe côn tay',
+      version: '2025',
+      color: 'Xanh',
+      quantity: 0,
+      status: 'Hết hàng',
+    },
+    {
+      code: 'H006',
+      name: 'Lead',
+      type: 'Xe tay ga',
+      version: '2024',
+      color: 'Trắng',
+      quantity: 2,
+      status: 'Còn hàng',
+    },
+    {
+      code: 'H007',
+      name: 'SH 150i',
+      type: 'Xe tay ga',
+      version: '2025',
+      color: 'Đỏ',
+      quantity: 1,
+      status: 'Còn hàng',
+    },
   ]
 
   const formatPrice = (price: number) => {
@@ -214,7 +270,8 @@ const Reports = () => {
                   valueStyle={{ color: '#3f8600' }}
                 />
                 <div style={{ marginTop: 8, fontSize: 12, color: '#52c41a' }}>
-                  <ArrowUpOutlined /> +15.2% so với {timeRange === 'month' ? 'tháng trước' : 'ngày trước'}
+                  <ArrowUpOutlined /> +15.2% so với{' '}
+                  {timeRange === 'month' ? 'tháng trước' : 'ngày trước'}
                 </div>
               </Card>
             </Col>
@@ -227,7 +284,8 @@ const Reports = () => {
                   valueStyle={{ color: '#1890ff' }}
                 />
                 <div style={{ marginTop: 8, fontSize: 12, color: '#52c41a' }}>
-                  <ArrowUpOutlined /> +12.5% so với {timeRange === 'month' ? 'tháng trước' : 'ngày trước'}
+                  <ArrowUpOutlined /> +12.5% so với{' '}
+                  {timeRange === 'month' ? 'tháng trước' : 'ngày trước'}
                 </div>
               </Card>
             </Col>
@@ -251,13 +309,14 @@ const Reports = () => {
               <Card style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <Statistic
                   title={`Doanh thu TB/${timeRange === 'month' ? 'tháng' : 'ngày'}`}
-                  value={totalRevenue / normalizedRevenueData.length}
+                  value={Math.round(totalRevenue / normalizedRevenueData.length)}
                   formatter={value => formatPrice(Number(value)) + ' VNĐ'}
                   prefix={<CalendarOutlined />}
                   valueStyle={{ color: '#fa8c16' }}
                 />
                 <div style={{ marginTop: 8, fontSize: 12, color: '#52c41a' }}>
-                  <ArrowUpOutlined /> +10.1% so với {timeRange === 'month' ? 'tháng trước' : 'ngày trước'}
+                  <ArrowUpOutlined /> +10.1% so với{' '}
+                  {timeRange === 'month' ? 'tháng trước' : 'ngày trước'}
                 </div>
               </Card>
             </Col>
@@ -265,7 +324,9 @@ const Reports = () => {
 
           <Card style={{ marginBottom: 24 }}>
             <h2 style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 24 }}>
-              Doanh thu {timeRange === 'month' ? 'theo tháng' : 'theo ngày'}
+              {timeRange === 'month'
+                ? 'Doanh thu theo tháng'
+                : 'So sánh doanh thu giữa các ngày trong tuần '}
             </h2>
             <Space direction="vertical" style={{ width: '100%' }} size="large">
               {normalizedRevenueData.map((item, index) => (

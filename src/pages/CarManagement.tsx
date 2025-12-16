@@ -54,8 +54,8 @@ interface Car {
 }
 
 const VEHICLE_TYPE_LABELS: Record<number, string> = {
-  1: 'Xe tay ga',
-  2: 'Xe số',
+  1: 'Xe số',
+  2: 'Xe tay ga',
   3: 'Xe côn tay',
 }
 
@@ -210,15 +210,15 @@ const CarManagement = () => {
     return Array.from(statusMap.entries())
   }, [cars])
 
-  const uniqueTypes = useMemo(() => {
-    const typeMap = new Map<number, string>()
-    cars.forEach(car => {
-      if (typeof car.vehicleType === 'number' && !typeMap.has(car.vehicleType)) {
-        typeMap.set(car.vehicleType, car.type)
-      }
-    })
-    return Array.from(typeMap.entries())
-  }, [cars])
+  // const uniqueTypes = useMemo(() => {
+  //   const typeMap = new Map<number, string>()
+  //   cars.forEach(car => {
+  //     if (typeof car.vehicleType === 'number' && !typeMap.has(car.vehicleType)) {
+  //       typeMap.set(car.vehicleType, car.type)
+  //     }
+  //   })
+  //   return Array.from(typeMap.entries())
+  // }, [cars])
 
   const uniqueNames = useMemo(() => Array.from(new Set(cars.map(car => car.name))), [cars])
 
@@ -423,7 +423,7 @@ const CarManagement = () => {
               setCurrentPage(1)
             }}
           >
-            Xe số
+            Xe tay ga
           </Button>
           <Button
             type={typeFilter === 1 ? 'primary' : 'default'}
@@ -434,7 +434,7 @@ const CarManagement = () => {
               setCurrentPage(1)
             }}
           >
-            Xe tay ga
+            Xe số
           </Button>
           <Button
             type={typeFilter === 3 ? 'primary' : 'default'}
@@ -469,7 +469,7 @@ const CarManagement = () => {
               </Option>
             ))}
           </Select>
-          <Select
+          {/* <Select
             placeholder="Loại xe"
             value={typeFilter}
             onChange={value => {
@@ -484,7 +484,7 @@ const CarManagement = () => {
                 {label}
               </Option>
             ))}
-          </Select>
+          </Select> */}
           <Select
             placeholder="Tên xe"
             value={nameFilter}
