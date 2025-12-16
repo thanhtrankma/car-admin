@@ -13,17 +13,28 @@ import {
   Input,
   Row,
   Col,
+  Upload,
+  Typography,
+  Divider,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { PlusOutlined, InboxOutlined, CloseOutlined, EyeOutlined } from '@ant-design/icons'
+import {
+  PlusOutlined,
+  InboxOutlined,
+  CloseOutlined,
+  EyeOutlined,
+  UploadOutlined,
+} from '@ant-design/icons'
 import dayjs from 'dayjs'
 import {
   listProductTypes,
   listWarehouses,
   getWarehouseById,
+  importWarehouseFromExcel,
   type ProductTypeDto,
   type WarehouseDto,
   type WarehouseDetailDto,
+  type ImportWarehouseResponse,
 } from '../services/productService'
 import { apiRequest, ApiError } from '../services/apiClient'
 
@@ -53,6 +64,10 @@ const StockIn = () => {
     pageSize: 10,
     total: 0,
   })
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+  const [importLoading, setImportLoading] = useState(false)
+  const [importResult, setImportResult] = useState<ImportWarehouseResponse['data'] | null>(null)
+  const [isImportDetailModalOpen, setIsImportDetailModalOpen] = useState(false)
 
   const fetchWarehouses = async (page = 1, limit = 10) => {
     try {
@@ -172,6 +187,25 @@ const StockIn = () => {
     }
   }
 
+  const handleImportExcel = async (file: File) => {
+    try {
+      setImportLoading(true)
+      const response = await importWarehouseFromExcel(file)
+      setImportResult(response.data)
+      message.success('Import Excel thành công!')
+      setIsImportModalOpen(false)
+      setIsImportDetailModalOpen(true)
+      fetchWarehouses(pagination.current, pagination.pageSize)
+    } catch (error) {
+      const errorMessage =
+        error instanceof ApiError ? error.message : 'Có lỗi xảy ra khi import Excel'
+      message.error(errorMessage)
+    } finally {
+      setImportLoading(false)
+    }
+    return false // Prevent default upload behavior
+  }
+
   const columns: ColumnsType<WarehouseDto> = [
     {
       title: 'Mã phiếu',
@@ -199,11 +233,7 @@ const StockIn = () => {
       title: 'Thao tác',
       key: 'action',
       render: (_, record) => (
-        <Button
-          type="link"
-          icon={<EyeOutlined />}
-          onClick={() => handleViewDetail(record.id)}
-        >
+        <Button type="link" icon={<EyeOutlined />} onClick={() => handleViewDetail(record.id)}>
           Xem chi tiết
         </Button>
       ),
@@ -234,14 +264,27 @@ const StockIn = () => {
           </h1>
           <p style={{ color: '#666', fontSize: 14 }}>Quản lý phiếu nhập kho và tồn kho</p>
         </div>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => setIsModalOpen(true)}
-          block={window.innerWidth < 768}
+        <Space
+          direction={window.innerWidth < 768 ? 'vertical' : 'horizontal'}
+          style={{ width: window.innerWidth < 768 ? '100%' : 'auto' }}
         >
-          Tạo phiếu nhập kho
-        </Button>
+          <Button
+            type="default"
+            icon={<UploadOutlined />}
+            onClick={() => setIsImportModalOpen(true)}
+            block={window.innerWidth < 768}
+          >
+            Import Excel
+          </Button>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setIsModalOpen(true)}
+            block={window.innerWidth < 768}
+          >
+            Tạo phiếu nhập kho
+          </Button>
+        </Space>
       </div>
 
       <Modal
@@ -498,10 +541,13 @@ const StockIn = () => {
           setWarehouseDetail(null)
         }}
         footer={[
-          <Button key="close" onClick={() => {
-            setIsDetailModalOpen(false)
-            setWarehouseDetail(null)
-          }}>
+          <Button
+            key="close"
+            onClick={() => {
+              setIsDetailModalOpen(false)
+              setWarehouseDetail(null)
+            }}
+          >
             Đóng
           </Button>,
         ]}
@@ -530,7 +576,8 @@ const StockIn = () => {
                 </Col>
                 <Col xs={24} sm={12}>
                   <div>
-                    <strong>Người tạo:</strong> {warehouseDetail.createdBy.username} ({warehouseDetail.createdBy.email})
+                    <strong>Người tạo:</strong> {warehouseDetail.createdBy.username} (
+                    {warehouseDetail.createdBy.email})
                   </div>
                 </Col>
                 <Col xs={24} sm={12}>
@@ -608,11 +655,16 @@ const StockIn = () => {
 
             {warehouseDetail.warehouseDetails && warehouseDetail.warehouseDetails.length > 0 && (
               <Card style={{ marginTop: 16, background: '#f0f9ff' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
                   <span style={{ fontWeight: 500, fontSize: 16 }}>Tổng giá trị:</span>
                   <span style={{ fontSize: 20, fontWeight: 'bold', color: '#1890ff' }}>
                     {formatPrice(
-                      warehouseDetail.warehouseDetails.reduce((sum, item) => sum + item.totalCost, 0)
+                      warehouseDetail.warehouseDetails.reduce(
+                        (sum, item) => sum + item.totalCost,
+                        0
+                      )
                     )}{' '}
                     VNĐ
                   </span>
@@ -621,6 +673,175 @@ const StockIn = () => {
             )}
           </div>
         ) : null}
+      </Modal>
+
+      {/* Modal Import Excel */}
+      <Modal
+        title="Import Excel nhập kho"
+        open={isImportModalOpen}
+        onCancel={() => {
+          setIsImportModalOpen(false)
+        }}
+        footer={null}
+        width={window.innerWidth < 768 ? '95%' : 600}
+      >
+        <Upload.Dragger
+          name="file"
+          accept=".xlsx,.xls"
+          beforeUpload={file => {
+            handleImportExcel(file)
+            return false
+          }}
+          showUploadList={false}
+          disabled={importLoading}
+        >
+          <p className="ant-upload-drag-icon">
+            <InboxOutlined style={{ fontSize: 48, color: '#1890ff' }} />
+          </p>
+          <p className="ant-upload-text">Nhấp hoặc kéo thả file Excel vào đây để upload</p>
+          <p className="ant-upload-hint">Chỉ chấp nhận file .xlsx hoặc .xls</p>
+        </Upload.Dragger>
+        {importLoading && (
+          <div style={{ textAlign: 'center', marginTop: 16 }}>
+            <Typography.Text type="secondary">Đang xử lý file...</Typography.Text>
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal Chi tiết Import */}
+      <Modal
+        title="Chi tiết Import Excel"
+        open={isImportDetailModalOpen}
+        onCancel={() => {
+          setIsImportDetailModalOpen(false)
+          setImportResult(null)
+        }}
+        footer={[
+          <Button
+            key="close"
+            onClick={() => {
+              setIsImportDetailModalOpen(false)
+              setImportResult(null)
+            }}
+          >
+            Đóng
+          </Button>,
+        ]}
+        width={window.innerWidth < 768 ? '95%' : 1200}
+      >
+        {importResult && (
+          <div>
+            <Card style={{ marginBottom: 16, background: '#f0f9ff' }}>
+              <Row gutter={[16, 16]}>
+                <Col xs={24} sm={12}>
+                  <div>
+                    <strong>Ngày nhập:</strong> {importResult.importInfo.importDate}
+                  </div>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <div>
+                    <strong>Mã phiếu nhập:</strong> {importResult.importInfo.importCode}
+                  </div>
+                </Col>
+              </Row>
+            </Card>
+
+            <Divider>Tóm tắt</Divider>
+            <div style={{ marginBottom: 16, overflowX: 'auto' }}>
+              <Table
+                columns={[
+                  {
+                    title: 'Mã xe',
+                    dataIndex: 'code',
+                    key: 'code',
+                  },
+                  {
+                    title: 'Tên xe',
+                    dataIndex: 'name',
+                    key: 'name',
+                  },
+                  {
+                    title: 'Số lượng',
+                    dataIndex: 'amount',
+                    key: 'amount',
+                  },
+                  {
+                    title: 'Đơn giá',
+                    dataIndex: 'unitPrice',
+                    key: 'unitPrice',
+                    render: (price: string) => `${formatPrice(Number(price))} VNĐ`,
+                  },
+                ]}
+                dataSource={importResult.summary}
+                rowKey="code"
+                pagination={false}
+                size="small"
+              />
+            </div>
+
+            <Divider>Chi tiết theo mã xe</Divider>
+            {importResult.groupedByCode.map(group => (
+              <Card key={group.code} style={{ marginBottom: 16 }}>
+                <Typography.Title level={5} style={{ marginBottom: 12 }}>
+                  {group.code} - {group.name} (Số lượng: {group.totalAmount}, Đơn giá:{' '}
+                  {formatPrice(Number(group.unitPrice))} VNĐ)
+                </Typography.Title>
+                <div style={{ overflowX: 'auto' }}>
+                  <Table
+                    columns={[
+                      {
+                        title: 'Mã nội bộ',
+                        dataIndex: 'internalCode',
+                        key: 'internalCode',
+                      },
+                      {
+                        title: 'Loại xe',
+                        dataIndex: 'type',
+                        key: 'type',
+                      },
+                      {
+                        title: 'Phiên bản',
+                        dataIndex: 'version',
+                        key: 'version',
+                      },
+                      {
+                        title: 'Màu sắc',
+                        dataIndex: 'color',
+                        key: 'color',
+                      },
+                      {
+                        title: 'Số khung',
+                        dataIndex: 'chassisNumber',
+                        key: 'chassisNumber',
+                      },
+                      {
+                        title: 'Số máy',
+                        dataIndex: 'engineNumber',
+                        key: 'engineNumber',
+                      },
+                      {
+                        title: 'Giá nhập',
+                        dataIndex: 'costPrice',
+                        key: 'costPrice',
+                        render: (price: string) => `${formatPrice(Number(price))} VNĐ`,
+                      },
+                      {
+                        title: 'Giá bán',
+                        dataIndex: 'salePrice',
+                        key: 'salePrice',
+                        render: (price: string) => `${formatPrice(Number(price))} VNĐ`,
+                      },
+                    ]}
+                    dataSource={group.details}
+                    rowKey={(record, idx) => `${record.code}-${idx}`}
+                    pagination={false}
+                    size="small"
+                  />
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </Modal>
     </div>
   )

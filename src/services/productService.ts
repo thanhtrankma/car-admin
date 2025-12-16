@@ -225,6 +225,74 @@ export interface WarehouseDetailResponse {
 export const getWarehouseById = (id: string) =>
   apiRequest<WarehouseDetailResponse>(`/warehouses/${id}`)
 
+export interface ImportWarehouseResponse {
+  success: boolean
+  data: {
+    importInfo: {
+      importDate: string
+      importCode: string
+    }
+    summary: Array<{
+      code: string
+      name: string
+      amount: number
+      unitPrice: string
+    }>
+    details: Array<{
+      internalCode: string
+      code: string
+      name: string
+      type: string
+      version: string
+      weight: string
+      capacity: string
+      year: string
+      color: string
+      chassisNumber: string
+      engineNumber: string
+      status: string
+      costPrice: string
+      salePrice: string
+    }>
+    groupedByCode: Array<{
+      code: string
+      name: string
+      totalAmount: number
+      unitPrice: string
+      details: Array<{
+        internalCode: string
+        code: string
+        name: string
+        type: string
+        version: string
+        weight: string
+        capacity: string
+        year: string
+        color: string
+        chassisNumber: string
+        engineNumber: string
+        status: string
+        costPrice: string
+        salePrice: string
+      }>
+      count: number
+    }>
+  }
+}
+
+export const importWarehouseFromExcel = (file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  return apiRequest<ImportWarehouseResponse>('/warehouses/import', {
+    method: 'POST',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+}
+
 export interface ProductRemainStateResponse {
   success: boolean
   data: {
