@@ -157,7 +157,7 @@ const Dashboard = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card hoverable style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Statistic
-              title={timeRange === 'month' ? 'Doanh số năm' : 'Doanh số năm trước'}
+              title={timeRange === 'month' ? 'Doanh số tháng trước' : 'Doanh số năm trước'}
               value={timeRange === 'month' ? '28.500' : '24.700'}
               suffix="M"
               prefix={<DollarOutlined />}

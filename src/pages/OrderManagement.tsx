@@ -53,6 +53,7 @@ interface OrderFormValues {
   customerPhone: string
   customerEmail?: string
   customerAddress?: string
+  identificationCard?: string
   productId?: string
   quantity?: number
 }
@@ -264,6 +265,7 @@ const OrderManagement = () => {
       customerPhone: values.customerPhone,
       customerEmail: values.customerEmail,
       customerAddress: values.customerAddress,
+      identificationCard: values.identificationCard,
       items: orderItems.map(item => ({
         productId: item.productId,
       })),
@@ -1073,6 +1075,20 @@ const OrderManagement = () => {
             rules={[{ required: true, message: 'Vui lòng nhập số điện thoại' }]}
           >
             <Input placeholder="Nhập số điện thoại" size="large" />
+          </Form.Item>
+
+          <Form.Item
+            label="CMND/CCCD"
+            name="identificationCard"
+            rules={[
+              { required: true, message: 'Vui lòng nhập CMND/CCCD' },
+              {
+                pattern: /^[0-9]{9,12}$/,
+                message: 'CMND/CCCD phải là số từ 9-12 chữ số',
+              },
+            ]}
+          >
+            <Input placeholder="Nhập số CMND/CCCD" size="large" />
           </Form.Item>
 
           <Form.Item

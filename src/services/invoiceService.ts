@@ -81,6 +81,7 @@ export interface CreateInvoicePayload {
   customerPhone: string
   customerEmail?: string
   customerAddress?: string
+  identificationCard?: string
   items: {
     productId: string
   }[]
