@@ -29,6 +29,12 @@ import * as XLSX from 'xlsx-js-style'
 
 const { Option } = Select
 
+const VEHICLE_TYPE_LABELS: Record<number, string> = {
+  1: 'Xe số',
+  2: 'Xe tay ga',
+  3: 'Xe côn tay',
+}
+
 interface OrderItem {
   productId: string
   carCode: string
@@ -68,6 +74,10 @@ const OrderManagement = () => {
   const [detailModalOpen, setDetailModalOpen] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
   const [invoiceDetail, setInvoiceDetail] = useState<InvoiceDetailResponse | null>(null)
+  const [filterVehicleType, setFilterVehicleType] = useState<number | undefined>(undefined)
+  const [filterProductName, setFilterProductName] = useState<string | undefined>(undefined)
+  const [filterVersion, setFilterVersion] = useState<string | undefined>(undefined)
+  const [filterColor, setFilterColor] = useState<string | undefined>(undefined)
   const { Title, Text } = Typography
 
   const fetchProducts = useCallback(async () => {
@@ -205,8 +215,40 @@ const OrderManagement = () => {
 
   const availableProducts = useMemo(() => {
     const orderProductIds = new Set(orderItems.map(item => item.productId))
-    return products.filter(product => !orderProductIds.has(product.id))
-  }, [products, orderItems])
+    let filtered = products.filter(product => !orderProductIds.has(product.id))
+
+    if (filterVehicleType !== undefined) {
+      filtered = filtered.filter(product => product.vehicleType === filterVehicleType)
+    }
+    if (filterProductName) {
+      filtered = filtered.filter(product =>
+        product.name.toLowerCase().includes(filterProductName.toLowerCase())
+      )
+    }
+    if (filterVersion) {
+      filtered = filtered.filter(product => product.version === filterVersion)
+    }
+    if (filterColor) {
+      filtered = filtered.filter(product => product.color === filterColor)
+    }
+
+    return filtered
+  }, [products, orderItems, filterVehicleType, filterProductName, filterVersion, filterColor])
+
+  const uniqueProductNames = useMemo(() => {
+    const names = new Set(availableProducts.map(p => p.name))
+    return Array.from(names).sort()
+  }, [availableProducts])
+
+  const uniqueVersions = useMemo(() => {
+    const versions = new Set(availableProducts.map(p => p.version).filter((v): v is string => !!v))
+    return Array.from(versions).sort()
+  }, [availableProducts])
+
+  const uniqueColors = useMemo(() => {
+    const colors = new Set(availableProducts.map(p => p.color).filter((c): c is string => !!c))
+    return Array.from(colors).sort()
+  }, [availableProducts])
 
   const subtotal = orderItems.reduce((sum, item) => sum + item.total, 0)
   const total = subtotal
@@ -710,7 +752,6 @@ const OrderManagement = () => {
             ws[cellAddress].s.numFmt = '#,##0'
           }
         })
-
         ;[1, 2, 3].forEach(col => {
           const cellAddress = XLSX.utils.encode_cell({ r: row, c: col })
           if (ws[cellAddress]) {
@@ -1061,6 +1102,115 @@ const OrderManagement = () => {
             }
             style={{ marginBottom: 16 }}
           >
+            <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+              <Col xs={24} sm={12} md={6}>
+                <Select
+                  placeholder="Chọn loại xe"
+                  size="large"
+                  style={{ width: '100%' }}
+                  allowClear
+                  value={filterVehicleType}
+                  onChange={value => setFilterVehicleType(value)}
+                >
+                  {Object.entries(VEHICLE_TYPE_LABELS).map(([key, label]) => (
+                    <Option key={key} value={Number(key)}>
+                      {label}
+                    </Option>
+                  ))}
+                </Select>
+              </Col>
+              <Col xs={24} sm={12} md={6}>
+                <Select
+                  placeholder="Chọn tên xe"
+                  size="large"
+                  style={{ width: '100%' }}
+                  allowClear
+                  showSearch
+                  value={filterProductName}
+                  onChange={value => setFilterProductName(value)}
+                  filterOption={(input, option) => {
+                    const label = option?.label || option?.children
+                    return String(label || '')
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }}
+                >
+                  {uniqueProductNames.map(name => (
+                    <Option key={name} value={name}>
+                      {name}
+                    </Option>
+                  ))}
+                </Select>
+              </Col>
+              <Col xs={24} sm={12} md={6}>
+                <Select
+                  placeholder="Chọn phiên bản"
+                  size="large"
+                  style={{ width: '100%' }}
+                  allowClear
+                  showSearch
+                  value={filterVersion}
+                  onChange={value => setFilterVersion(value)}
+                  filterOption={(input, option) => {
+                    const label = option?.label || option?.children
+                    return String(label || '')
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }}
+                >
+                  {uniqueVersions.map(version => (
+                    <Option key={version} value={version}>
+                      {version}
+                    </Option>
+                  ))}
+                </Select>
+              </Col>
+              <Col xs={24} sm={12} md={6}>
+                <Select
+                  placeholder="Chọn màu sắc"
+                  size="large"
+                  style={{ width: '100%' }}
+                  allowClear
+                  showSearch
+                  value={filterColor}
+                  onChange={value => setFilterColor(value)}
+                  filterOption={(input, option) => {
+                    const label = option?.label || option?.children
+                    return String(label || '')
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }}
+                >
+                  {uniqueColors.map(color => (
+                    <Option key={color} value={color}>
+                      {color}
+                    </Option>
+                  ))}
+                </Select>
+              </Col>
+            </Row>
+            {(filterVehicleType !== undefined ||
+              filterProductName ||
+              filterVersion ||
+              filterColor) && (
+              <div style={{ marginBottom: 12 }}>
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => {
+                    setFilterVehicleType(undefined)
+                    setFilterProductName(undefined)
+                    setFilterVersion(undefined)
+                    setFilterColor(undefined)
+                  }}
+                >
+                  Xóa bộ lọc
+                </Button>
+                <span style={{ fontSize: 12, color: '#666', marginLeft: 8 }}>
+                  Đang hiển thị {availableProducts.length} sản phẩm
+                </span>
+              </div>
+            )}
             <Row gutter={[12, 12]} align="middle">
               <Col xs={24} sm={12} md={10}>
                 <Form.Item
