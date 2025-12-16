@@ -32,6 +32,12 @@ npm install
 npm run dev
 ```
 
+## Để tạo lại favicon sau khi thay đổi logo, chạy:
+
+```bash
+npm run generate-favicons
+```
+
 Ứng dụng sẽ chạy tại `http://localhost:5173`
 
 ## Cấu trúc thư mục
