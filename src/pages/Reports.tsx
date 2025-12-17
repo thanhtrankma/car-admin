@@ -284,13 +284,13 @@ const Reports = () => {
                 <Card style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                   <Statistic
                     title="Tổng doanh thu"
-                    value={overview?.value1.total || 0}
+                    value={overview?.value1.value1 || 0}
                     formatter={value => formatPrice(Number(value)) + ' VNĐ'}
                     prefix={<DollarOutlined />}
                     valueStyle={{ color: '#3f8600' }}
                   />
                   <div style={{ marginTop: 8, fontSize: 12 }}>
-                    {renderRateIcon(overview?.value1.rate ?? null)} so với{' '}
+                    {renderRateIcon(overview?.value1.value2 ?? null)} so với{' '}
                     {timeRange === 'MONTH' ? 'tháng trước' : 'ngày trước'}
                   </div>
                 </Card>
@@ -299,14 +299,14 @@ const Reports = () => {
                 <Card style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                   <Statistic
                     title="Doanh thu trung bình"
-                    value={overview?.value2.total || 0}
+                    value={overview?.value2.value1 || 0}
                     formatter={value => formatPrice(Number(value)) + ' VNĐ'}
                     prefix={<CalendarOutlined />}
                     valueStyle={{ color: '#fa8c16' }}
                   />
-                  {overview?.value2.rate !== null && (
+                  {overview?.value2.value2 !== null && (
                     <div style={{ marginTop: 8, fontSize: 12 }}>
-                      {renderRateIcon(overview?.value2.rate ?? null)} so với{' '}
+                      {renderRateIcon(overview?.value2.value2 ?? null)} so với{' '}
                       {timeRange === 'MONTH' ? 'tháng trước' : 'ngày trước'}
                     </div>
                   )}
@@ -316,12 +316,12 @@ const Reports = () => {
                 <Card style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                   <Statistic
                     title="Số lượng xe bán ra"
-                    value={overview?.value3.total || 0}
+                    value={overview?.value3.value1 || 0}
                     prefix={<CarOutlined />}
                     valueStyle={{ color: '#1890ff' }}
                   />
                   <div style={{ marginTop: 8, fontSize: 12 }}>
-                    {renderRateIcon(overview?.value3.rate ?? null)} so với{' '}
+                    {renderRateIcon(overview?.value3.value2 ?? null)} so với{' '}
                     {timeRange === 'MONTH' ? 'tháng trước' : 'ngày trước'}
                   </div>
                 </Card>
@@ -330,12 +330,12 @@ const Reports = () => {
                 <Card style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                   <Statistic
                     title="Xe bán chạy nhất"
-                    value={overview?.value4.name || '-'}
+                    value={overview?.value4.value1 || '-'}
                     prefix={<ShoppingCartOutlined />}
                     valueStyle={{ fontSize: 18, wordBreak: 'break-word', color: '#1890ff' }}
                   />
                   <div style={{ marginTop: 8, fontSize: 12, color: '#1890ff' }}>
-                    {overview?.value4.total || 0} đơn
+                    {overview?.value4.value2 || 0} đơn
                   </div>
                 </Card>
               </Col>

@@ -121,6 +121,16 @@ const Dashboard = () => {
     )
   }
 
+  // Helper to get overview values from new API structure
+  const getOverviewValue1 = () => overview?.value1.value1 || 0
+  const getOverviewRate1 = () => overview?.value1.value2 ?? null
+  const getOverviewValue2 = () => overview?.value2.value1 || 0
+  const getOverviewRate2 = () => overview?.value2.value2 ?? null
+  const getOverviewValue3 = () => overview?.value3.value1 || 0
+  const getOverviewRate3 = () => overview?.value3.value2 ?? null
+  const getOverviewValue4Name = () => overview?.value4.value1 || '-'
+  const getOverviewValue4Total = () => overview?.value4.value2 || 0
+
   return (
     <div>
       <Card style={{ marginBottom: 24 }}>
@@ -186,12 +196,12 @@ const Dashboard = () => {
           >
             <Statistic
               title={timeRange === 'MONTH' ? 'Doanh số tháng này' : 'Doanh số năm này'}
-              value={overview?.value1.total || 0}
+              value={getOverviewValue1()}
               formatter={value => formatPrice(Number(value)) + ' VNĐ'}
               prefix={<DollarOutlined />}
               valueStyle={{ color: '#1890ff' }}
             />
-            {renderRate(overview?.value1.rate ?? null)}
+            {renderRate(getOverviewRate1())}
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
@@ -202,12 +212,12 @@ const Dashboard = () => {
           >
             <Statistic
               title="Doanh thu trung bình"
-              value={overview?.value2.total || 0}
+              value={getOverviewValue2()}
               formatter={value => formatPrice(Number(value)) + ' VNĐ'}
               prefix={<DollarOutlined />}
               valueStyle={{ color: '#52c41a' }}
             />
-            {renderRate(overview?.value2.rate ?? null)}
+            {renderRate(getOverviewRate2())}
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
@@ -218,11 +228,11 @@ const Dashboard = () => {
           >
             <Statistic
               title="Số lượng xe bán ra"
-              value={overview?.value3.total || 0}
+              value={getOverviewValue3()}
               prefix={<CarOutlined />}
               valueStyle={{ color: '#722ed1' }}
             />
-            {renderRate(overview?.value3.rate ?? null)}
+            {renderRate(getOverviewRate3())}
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
@@ -233,12 +243,12 @@ const Dashboard = () => {
           >
             <Statistic
               title="Xe bán chạy nhất"
-              value={overview?.value4.name || '-'}
+              value={getOverviewValue4Name()}
               prefix={<TrophyOutlined />}
               valueStyle={{ fontSize: 16, wordBreak: 'break-word' }}
             />
             <div style={{ marginTop: 8, color: '#1890ff', fontSize: 12 }}>
-              <ShoppingCartOutlined /> {overview?.value4.total || 0} chiếc đã bán
+              <ShoppingCartOutlined /> {getOverviewValue4Total()} chiếc đã bán
             </div>
           </Card>
         </Col>

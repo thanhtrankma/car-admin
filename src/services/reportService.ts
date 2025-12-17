@@ -3,20 +3,20 @@ import { apiRequest } from './apiClient'
 export interface ReportOverviewResponse {
   overview: {
     value1: {
-      total: number
-      rate: number | null
+      value1: number
+      value2: number | null
     }
     value2: {
-      total: number
-      rate: number | null
+      value1: number
+      value2: number | null
     }
     value3: {
-      total: number
-      rate: number | null
+      value1: number
+      value2: number | null
     }
     value4: {
-      name: string
-      total: number
+      value1: string
+      value2: number
     }
   }
 }
