@@ -298,9 +298,9 @@ const Reports = () => {
               <Col xs={24} sm={12} lg={6}>
                 <Card style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                   <Statistic
-                    title="Doanh thu trung bình"
+                    title="Số hoá đơn"
                     value={overview?.value2.value1 || 0}
-                    formatter={value => formatPrice(Number(value)) + ' VNĐ'}
+                    formatter={value => formatPrice(Number(value))}
                     prefix={<CalendarOutlined />}
                     valueStyle={{ color: '#fa8c16' }}
                   />

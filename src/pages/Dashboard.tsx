@@ -211,9 +211,9 @@ const Dashboard = () => {
             loading={loadingReport}
           >
             <Statistic
-              title="Doanh thu trung bình"
+              title="Số hoá đơn"
               value={getOverviewValue2()}
-              formatter={value => formatPrice(Number(value)) + ' VNĐ'}
+              formatter={value => formatPrice(Number(value))}
               prefix={<DollarOutlined />}
               valueStyle={{ color: '#52c41a' }}
             />
