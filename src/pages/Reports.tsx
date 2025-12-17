@@ -1,171 +1,157 @@
-import { useState } from 'react'
-import { Card, Space, Table, Row, Col, Statistic, Progress, Tag, Radio } from 'antd'
+import { useState, useEffect, useCallback } from 'react'
+import {
+  Card,
+  Space,
+  Table,
+  Row,
+  Col,
+  Statistic,
+  Progress,
+  Tag,
+  Radio,
+  Button,
+  message,
+  Spin,
+} from 'antd'
 import {
   DollarOutlined,
   CarOutlined,
   ShoppingCartOutlined,
   CalendarOutlined,
   ArrowUpOutlined,
+  ArrowDownOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons'
+import {
+  getReportOverview,
+  getReportChart,
+  getReportRank,
+  getReportInventory,
+  exportReportExcel,
+  type ReportOverviewResponse,
+  type ReportChartItem,
+  type ReportRankItem,
+  type ReportInventoryItem,
+} from '../services/reportService'
+
+const VEHICLE_TYPE_LABELS: Record<number, string> = {
+  1: 'Xe số',
+  2: 'Xe tay ga',
+  3: 'Xe côn tay',
+}
 
 const Reports = () => {
   const [reportType, setReportType] = useState<'sales' | 'inventory'>('sales')
-  const [timeRange, setTimeRange] = useState<'day' | 'month'>('month')
+  const [timeRange, setTimeRange] = useState<'DAY' | 'MONTH'>('MONTH')
+  const [loading, setLoading] = useState(false)
+  const [exportLoading, setExportLoading] = useState(false)
 
-  type MonthlyRevenue = { month: string; revenue: number }
-  type DailyRevenue = { day: string; revenue: number }
+  // Data states
+  const [overview, setOverview] = useState<ReportOverviewResponse['overview'] | null>(null)
+  const [chartData, setChartData] = useState<ReportChartItem[]>([])
+  const [rankData, setRankData] = useState<ReportRankItem[]>([])
+  const [inventoryData, setInventoryData] = useState<ReportInventoryItem[]>([])
+  const [inventorySummary, setInventorySummary] = useState<{
+    totalGroups: number
+    totalProducts: number
+    totalInStock: number
+    totalOutOfStock: number
+  } | null>(null)
 
-  const monthlyRevenue: MonthlyRevenue[] = [
-    { month: 'Tháng 1', revenue: 1800000000 },
-    { month: 'Tháng 2', revenue: 2100000000 },
-    { month: 'Tháng 3', revenue: 1950000000 },
-    { month: 'Tháng 4', revenue: 2300000000 },
-    { month: 'Tháng 5', revenue: 2500000000 },
-    { month: 'Tháng 6', revenue: 2800000000 },
-  ]
+  const fetchSalesData = useCallback(async () => {
+    try {
+      setLoading(true)
+      const [overviewRes, chartRes, rankRes] = await Promise.all([
+        getReportOverview(timeRange),
+        getReportChart(),
+        getReportRank(),
+      ])
+      setOverview(overviewRes.overview)
+      setChartData(chartRes.data)
+      setRankData(rankRes.data.ranking)
+    } catch {
+      message.error('Không thể tải dữ liệu báo cáo')
+    } finally {
+      setLoading(false)
+    }
+  }, [timeRange])
 
-  // Generate daily revenue data with actual dates (today and 6 previous days)
-  const generateDailyRevenue = (): DailyRevenue[] => {
-    const today = new Date()
-    const revenues = [100000000, 95000000, 120000000, 85000000, 110000000, 105000000, 130000000]
+  const fetchInventoryData = useCallback(async () => {
+    try {
+      setLoading(true)
+      const res = await getReportInventory()
+      setInventoryData(res.data.inventory)
+      setInventorySummary(res.data.summary)
+    } catch {
+      message.error('Không thể tải dữ liệu tồn kho')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
-    return Array.from({ length: 7 }, (_, index) => {
-      const date = new Date(today)
-      date.setDate(today.getDate() - index) // index 0 = today, index 1 = yesterday, etc.
-      const day = date.getDate()
-      const month = date.getMonth() + 1
-      const formattedDate = `${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}`
+  useEffect(() => {
+    if (reportType === 'sales') {
+      fetchSalesData()
+    } else {
+      fetchInventoryData()
+    }
+  }, [reportType, fetchSalesData, fetchInventoryData])
 
-      return {
-        day: formattedDate,
-        revenue: revenues[index],
-      }
-    })
+  const handleExport = async () => {
+    try {
+      setExportLoading(true)
+      await exportReportExcel()
+      message.success('Xuất báo cáo thành công!')
+    } catch {
+      message.error('Không thể xuất báo cáo')
+    } finally {
+      setExportLoading(false)
+    }
   }
-
-  const dailyRevenue: DailyRevenue[] = generateDailyRevenue()
-
-  const topSellingCars = [
-    { name: 'Honda Vision 2025', version: '2025', color: 'Trắng', sales: 45, revenue: 1462050000 },
-    { name: 'Honda SH Mode 2025', version: '2025', color: 'Đen', sales: 38, revenue: 2217300000 },
-    { name: 'Air Blade', version: '2024', color: 'Xám', sales: 32, revenue: 1446080000 },
-    { name: 'Wave Alpha 110', version: '2025', color: 'Đỏ', sales: 28, revenue: 542640000 },
-    { name: 'Winner X', version: '2025', color: 'Xanh', sales: 25, revenue: 1205250000 },
-  ]
-
-  const inventoryData = [
-    {
-      code: 'H001',
-      name: 'Wave Alpha',
-      type: 'Xe số',
-      version: '2025',
-      color: 'Đỏ',
-      quantity: 10,
-      status: 'Còn hàng',
-    },
-    {
-      code: 'H002',
-      name: 'Vision',
-      type: 'Xe tay ga',
-      version: '2025',
-      color: 'Trắng',
-      quantity: 8,
-      status: 'Còn hàng',
-    },
-    {
-      code: 'H003',
-      name: 'SH Mode',
-      type: 'Xe tay ga',
-      version: '2025',
-      color: 'Đen',
-      quantity: 5,
-      status: 'Còn hàng',
-    },
-    {
-      code: 'H004',
-      name: 'Air Blade',
-      type: 'Xe tay ga',
-      version: '2024',
-      color: 'Xám',
-      quantity: 3,
-      status: 'Còn hàng',
-    },
-    {
-      code: 'H005',
-      name: 'Winner X',
-      type: 'Xe côn tay',
-      version: '2025',
-      color: 'Xanh',
-      quantity: 0,
-      status: 'Hết hàng',
-    },
-    {
-      code: 'H006',
-      name: 'Lead',
-      type: 'Xe tay ga',
-      version: '2024',
-      color: 'Trắng',
-      quantity: 2,
-      status: 'Còn hàng',
-    },
-    {
-      code: 'H007',
-      name: 'SH 150i',
-      type: 'Xe tay ga',
-      version: '2025',
-      color: 'Đỏ',
-      quantity: 1,
-      status: 'Còn hàng',
-    },
-  ]
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN').format(price)
   }
 
-  const revenueDataset = timeRange === 'month' ? monthlyRevenue : dailyRevenue
-  const normalizedRevenueData = revenueDataset.map(item =>
-    'month' in item
-      ? { label: item.month, revenue: item.revenue }
-      : { label: item.day, revenue: item.revenue }
-  )
-  const maxRevenue = Math.max(...normalizedRevenueData.map(r => r.revenue))
-  const totalRevenue = normalizedRevenueData.reduce((sum, r) => sum + r.revenue, 0)
-  const totalCarsSold = topSellingCars.reduce((sum, car) => sum + car.sales, 0)
+  const maxRevenue = Math.max(...chartData.map(r => r.price), 1)
+  const totalRevenue = chartData.reduce((sum, r) => sum + r.price, 0)
 
   const salesColumns = [
     {
       title: 'Xếp hạng',
+      dataIndex: 'rank',
       key: 'rank',
-      render: (_: unknown, __: unknown, index: number): React.ReactNode => (
-        <span style={{ fontSize: 18, fontWeight: 'bold', color: '#1890ff' }}>#{index + 1}</span>
+      render: (rank: number): React.ReactNode => (
+        <span style={{ fontSize: 18, fontWeight: 'bold', color: '#1890ff' }}>#{rank}</span>
       ),
     },
     {
       title: 'Tên xe',
-      dataIndex: 'name',
-      key: 'name',
+      dataIndex: 'productName',
+      key: 'productName',
     },
     {
       title: 'Phiên bản',
       dataIndex: 'version',
       key: 'version',
+      render: (version: string | null) => version || '-',
     },
     {
       title: 'Màu sắc',
       dataIndex: 'color',
       key: 'color',
+      render: (color: string | null) => color || '-',
     },
     {
       title: 'Số lượng bán',
-      dataIndex: 'sales',
-      key: 'sales',
-      render: (sales: number) => `${sales} xe`,
+      dataIndex: 'totalQuantity',
+      key: 'totalQuantity',
+      render: (qty: number) => `${qty} xe`,
     },
     {
       title: 'Doanh thu',
-      dataIndex: 'revenue',
-      key: 'revenue',
+      dataIndex: 'totalRevenue',
+      key: 'totalRevenue',
       render: (revenue: number) => formatPrice(revenue) + ' VNĐ',
     },
   ]
@@ -173,43 +159,62 @@ const Reports = () => {
   const inventoryColumns = [
     {
       title: 'Mã xe',
-      dataIndex: 'code',
-      key: 'code',
+      dataIndex: 'productTypeCode',
+      key: 'productTypeCode',
     },
     {
       title: 'Tên xe',
-      dataIndex: 'name',
-      key: 'name',
+      dataIndex: 'productTypeName',
+      key: 'productTypeName',
     },
     {
       title: 'Loại xe',
-      dataIndex: 'type',
-      key: 'type',
+      dataIndex: 'vehicleType',
+      key: 'vehicleType',
+      render: (type: number) => VEHICLE_TYPE_LABELS[type] || '-',
     },
     {
       title: 'Phiên bản',
       dataIndex: 'version',
       key: 'version',
+      render: (version: string | null) => version || '-',
     },
     {
       title: 'Màu',
       dataIndex: 'color',
       key: 'color',
+      render: (color: string | null) => color || '-',
     },
     {
       title: 'Số lượng tồn',
-      dataIndex: 'quantity',
-      key: 'quantity',
+      dataIndex: 'inStockQuantity',
+      key: 'inStockQuantity',
     },
     {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      render: (status: string) => (
-        <Tag color={status === 'Còn hàng' ? 'green' : 'red'}>{status}</Tag>
+      render: (status: boolean) => (
+        <Tag color={status ? 'green' : 'red'}>{status ? 'Còn hàng' : 'Hết hàng'}</Tag>
       ),
     },
   ]
+
+  const renderRateIcon = (rate: number | null) => {
+    if (rate === null) return null
+    if (rate >= 0) {
+      return (
+        <span style={{ color: '#52c41a' }}>
+          <ArrowUpOutlined /> +{rate}%
+        </span>
+      )
+    }
+    return (
+      <span style={{ color: '#ff4d4f' }}>
+        <ArrowDownOutlined /> {rate}%
+      </span>
+    )
+  }
 
   return (
     <div>
@@ -235,179 +240,233 @@ const Reports = () => {
           </h1>
           <p style={{ color: '#666', fontSize: 14 }}>Xem báo cáo doanh số và tồn kho</p>
         </div>
-        <Radio.Group
-          value={reportType}
-          onChange={e => setReportType(e.target.value)}
-          buttonStyle="solid"
-          size={window.innerWidth < 576 ? 'small' : 'middle'}
+        <Space
+          direction={window.innerWidth < 768 ? 'vertical' : 'horizontal'}
+          style={{ width: window.innerWidth < 768 ? '100%' : 'auto' }}
         >
-          <Radio.Button value="sales">Báo cáo doanh số</Radio.Button>
-          <Radio.Button value="inventory">Báo cáo tồn kho</Radio.Button>
-        </Radio.Group>
+          <Button
+            type="default"
+            icon={<DownloadOutlined />}
+            onClick={handleExport}
+            loading={exportLoading}
+            block={window.innerWidth < 768}
+          >
+            Xuất Excel
+          </Button>
+          <Radio.Group
+            value={reportType}
+            onChange={e => setReportType(e.target.value)}
+            buttonStyle="solid"
+            size={window.innerWidth < 576 ? 'small' : 'middle'}
+          >
+            <Radio.Button value="sales">Báo cáo doanh số</Radio.Button>
+            <Radio.Button value="inventory">Báo cáo tồn kho</Radio.Button>
+          </Radio.Group>
+        </Space>
       </div>
 
-      {reportType === 'sales' && (
-        <>
-          <Card style={{ marginBottom: 16 }}>
-            <Radio.Group
-              value={timeRange}
-              onChange={e => setTimeRange(e.target.value)}
-              buttonStyle="solid"
-            >
-              <Radio.Button value="day">Theo ngày</Radio.Button>
-              <Radio.Button value="month">Theo tháng</Radio.Button>
-            </Radio.Group>
-          </Card>
+      <Spin spinning={loading}>
+        {reportType === 'sales' && (
+          <>
+            <Card style={{ marginBottom: 16 }}>
+              <Radio.Group
+                value={timeRange}
+                onChange={e => setTimeRange(e.target.value)}
+                buttonStyle="solid"
+              >
+                <Radio.Button value="DAY">Theo ngày</Radio.Button>
+                <Radio.Button value="MONTH">Theo tháng</Radio.Button>
+              </Radio.Group>
+            </Card>
 
-          <Row gutter={[16, 16]} style={{ marginBottom: 24 }} align="stretch">
-            <Col xs={24} sm={12} lg={6}>
-              <Card style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <Statistic
-                  title="Tổng doanh thu"
-                  value={totalRevenue}
-                  formatter={value => formatPrice(Number(value)) + ' VNĐ'}
-                  prefix={<DollarOutlined />}
-                  valueStyle={{ color: '#3f8600' }}
-                />
-                <div style={{ marginTop: 8, fontSize: 12, color: '#52c41a' }}>
-                  <ArrowUpOutlined /> +15.2% so với{' '}
-                  {timeRange === 'month' ? 'tháng trước' : 'ngày trước'}
-                </div>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Card style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <Statistic
-                  title="Số lượng xe bán ra"
-                  value={totalCarsSold}
-                  prefix={<CarOutlined />}
-                  valueStyle={{ color: '#1890ff' }}
-                />
-                <div style={{ marginTop: 8, fontSize: 12, color: '#52c41a' }}>
-                  <ArrowUpOutlined /> +12.5% so với{' '}
-                  {timeRange === 'month' ? 'tháng trước' : 'ngày trước'}
-                </div>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Card style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <Statistic
-                  title="Xe bán chạy nhất"
-                  value={topSellingCars[0]?.name || '-'}
-                  prefix={<ShoppingCartOutlined />}
-                  valueStyle={{ fontSize: 18, wordBreak: 'break-word', color: '#1890ff' }}
-                />
-                <div style={{ marginTop: 8, fontSize: 12, color: '#1890ff' }}>
-                  {topSellingCars[0]?.sales || 0} đơn
-                </div>
-                {/* <div style={{ marginTop: 4, fontSize: 12, color: '#52c41a' }}>
-                  <ArrowUpOutlined /> +8.3% so với {timeRange === 'month' ? 'tháng trước' : 'ngày trước'}
-                </div> */}
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Card style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <Statistic
-                  title={`Doanh thu TB/${timeRange === 'month' ? 'tháng' : 'ngày'}`}
-                  value={Math.round(totalRevenue / normalizedRevenueData.length)}
-                  formatter={value => formatPrice(Number(value)) + ' VNĐ'}
-                  prefix={<CalendarOutlined />}
-                  valueStyle={{ color: '#fa8c16' }}
-                />
-                <div style={{ marginTop: 8, fontSize: 12, color: '#52c41a' }}>
-                  <ArrowUpOutlined /> +10.1% so với{' '}
-                  {timeRange === 'month' ? 'tháng trước' : 'ngày trước'}
-                </div>
-              </Card>
-            </Col>
-          </Row>
-
-          <Card style={{ marginBottom: 24 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 24 }}>
-              {timeRange === 'month'
-                ? 'Doanh thu theo tháng'
-                : 'So sánh doanh thu giữa các ngày trong tuần '}
-            </h2>
-            <Space direction="vertical" style={{ width: '100%' }} size="large">
-              {normalizedRevenueData.map((item, index) => (
-                <div key={index}>
-                  <div
-                    style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}
-                  >
-                    <span style={{ fontWeight: 500 }}>{item.label}</span>
-                    <span style={{ fontWeight: 'bold' }}>{formatPrice(item.revenue)} VNĐ</span>
-                  </div>
-                  <Progress
-                    percent={(item.revenue / maxRevenue) * 100}
-                    strokeColor={{
-                      '0%': '#108ee9',
-                      '100%': '#87d068',
-                    }}
-                    showInfo={false}
+            <Row gutter={[16, 16]} style={{ marginBottom: 24 }} align="stretch">
+              <Col xs={24} sm={12} lg={6}>
+                <Card style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <Statistic
+                    title="Tổng doanh thu"
+                    value={overview?.value1.total || 0}
+                    formatter={value => formatPrice(Number(value)) + ' VNĐ'}
+                    prefix={<DollarOutlined />}
+                    valueStyle={{ color: '#3f8600' }}
                   />
-                </div>
-              ))}
-            </Space>
-          </Card>
+                  <div style={{ marginTop: 8, fontSize: 12 }}>
+                    {renderRateIcon(overview?.value1.rate ?? null)} so với{' '}
+                    {timeRange === 'MONTH' ? 'tháng trước' : 'ngày trước'}
+                  </div>
+                </Card>
+              </Col>
+              <Col xs={24} sm={12} lg={6}>
+                <Card style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <Statistic
+                    title="Doanh thu trung bình"
+                    value={overview?.value2.total || 0}
+                    formatter={value => formatPrice(Number(value)) + ' VNĐ'}
+                    prefix={<CalendarOutlined />}
+                    valueStyle={{ color: '#fa8c16' }}
+                  />
+                  {overview?.value2.rate !== null && (
+                    <div style={{ marginTop: 8, fontSize: 12 }}>
+                      {renderRateIcon(overview?.value2.rate ?? null)} so với{' '}
+                      {timeRange === 'MONTH' ? 'tháng trước' : 'ngày trước'}
+                    </div>
+                  )}
+                </Card>
+              </Col>
+              <Col xs={24} sm={12} lg={6}>
+                <Card style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <Statistic
+                    title="Số lượng xe bán ra"
+                    value={overview?.value3.total || 0}
+                    prefix={<CarOutlined />}
+                    valueStyle={{ color: '#1890ff' }}
+                  />
+                  <div style={{ marginTop: 8, fontSize: 12 }}>
+                    {renderRateIcon(overview?.value3.rate ?? null)} so với{' '}
+                    {timeRange === 'MONTH' ? 'tháng trước' : 'ngày trước'}
+                  </div>
+                </Card>
+              </Col>
+              <Col xs={24} sm={12} lg={6}>
+                <Card style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <Statistic
+                    title="Xe bán chạy nhất"
+                    value={overview?.value4.name || '-'}
+                    prefix={<ShoppingCartOutlined />}
+                    valueStyle={{ fontSize: 18, wordBreak: 'break-word', color: '#1890ff' }}
+                  />
+                  <div style={{ marginTop: 8, fontSize: 12, color: '#1890ff' }}>
+                    {overview?.value4.total || 0} đơn
+                  </div>
+                </Card>
+              </Col>
+            </Row>
 
+            <Card style={{ marginBottom: 24 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 24 }}>
+                {timeRange === 'MONTH'
+                  ? 'Doanh thu theo tháng'
+                  : 'So sánh doanh thu giữa các ngày trong tuần'}
+              </h2>
+              {chartData.length > 0 ? (
+                <Space direction="vertical" style={{ width: '100%' }} size="large">
+                  {chartData.map((item, index) => (
+                    <div key={index}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          marginBottom: 8,
+                        }}
+                      >
+                        <span style={{ fontWeight: 500 }}>{item.date}</span>
+                        <span style={{ fontWeight: 'bold' }}>
+                          {formatPrice(item.price)} VNĐ ({item.quantity} xe)
+                        </span>
+                      </div>
+                      <Progress
+                        percent={(item.price / maxRevenue) * 100}
+                        strokeColor={{
+                          '0%': '#108ee9',
+                          '100%': '#87d068',
+                        }}
+                        showInfo={false}
+                      />
+                    </div>
+                  ))}
+                  <Card style={{ background: '#f0f9ff', marginTop: 8 }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <span style={{ fontWeight: 500, fontSize: 16 }}>Tổng doanh thu:</span>
+                      <span style={{ fontSize: 20, fontWeight: 'bold', color: '#1890ff' }}>
+                        {formatPrice(totalRevenue)} VNĐ
+                      </span>
+                    </div>
+                  </Card>
+                </Space>
+              ) : (
+                <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
+                  Không có dữ liệu
+                </div>
+              )}
+            </Card>
+
+            <Card>
+              <h2 style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>
+                Xe bán chạy nhất
+              </h2>
+              <div style={{ overflowX: 'auto' }}>
+                <Table
+                  columns={salesColumns}
+                  dataSource={rankData}
+                  rowKey="rank"
+                  pagination={false}
+                  scroll={{ x: 'max-content' }}
+                  locale={{ emptyText: 'Không có dữ liệu' }}
+                />
+              </div>
+            </Card>
+          </>
+        )}
+
+        {reportType === 'inventory' && (
           <Card>
-            <h2 style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>Xe bán chạy nhất</h2>
+            <h2 style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 24 }}>Báo cáo tồn kho</h2>
+            <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+              <Col xs={24} sm={6}>
+                <Card>
+                  <Statistic
+                    title="Tổng nhóm xe"
+                    value={inventorySummary?.totalGroups || 0}
+                    valueStyle={{ color: '#1890ff' }}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} sm={6}>
+                <Card>
+                  <Statistic
+                    title="Tổng số xe"
+                    value={inventorySummary?.totalProducts || 0}
+                    valueStyle={{ color: '#722ed1' }}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} sm={6}>
+                <Card>
+                  <Statistic
+                    title="Xe còn hàng"
+                    value={inventorySummary?.totalInStock || 0}
+                    valueStyle={{ color: '#52c41a' }}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} sm={6}>
+                <Card>
+                  <Statistic
+                    title="Xe hết hàng"
+                    value={inventorySummary?.totalOutOfStock || 0}
+                    valueStyle={{ color: '#ff4d4f' }}
+                  />
+                </Card>
+              </Col>
+            </Row>
             <div style={{ overflowX: 'auto' }}>
               <Table
-                columns={salesColumns}
-                dataSource={topSellingCars}
-                rowKey="name"
+                columns={inventoryColumns}
+                dataSource={inventoryData}
+                rowKey={(record, index) => `${record.productTypeId}-${index}`}
                 pagination={false}
                 scroll={{ x: 'max-content' }}
+                locale={{ emptyText: 'Không có dữ liệu' }}
               />
             </div>
           </Card>
-        </>
-      )}
-
-      {reportType === 'inventory' && (
-        <Card>
-          <h2 style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 24 }}>Báo cáo tồn kho</h2>
-          <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-            <Col xs={24} sm={8}>
-              <Card>
-                <Statistic
-                  title="Tổng số xe"
-                  value={inventoryData.length}
-                  valueStyle={{ color: '#1890ff' }}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Card>
-                <Statistic
-                  title="Xe còn hàng"
-                  value={inventoryData.filter(item => item.status === 'Còn hàng').length}
-                  valueStyle={{ color: '#52c41a' }}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Card>
-                <Statistic
-                  title="Xe hết hàng"
-                  value={inventoryData.filter(item => item.status === 'Hết hàng').length}
-                  valueStyle={{ color: '#ff4d4f' }}
-                />
-              </Card>
-            </Col>
-          </Row>
-          <div style={{ overflowX: 'auto' }}>
-            <Table
-              columns={inventoryColumns}
-              dataSource={inventoryData}
-              rowKey="code"
-              pagination={false}
-              scroll={{ x: 'max-content' }}
-            />
-          </div>
-        </Card>
-      )}
+        )}
+      </Spin>
     </div>
   )
 }
